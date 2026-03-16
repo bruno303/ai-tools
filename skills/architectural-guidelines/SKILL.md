@@ -13,6 +13,7 @@ description: Enforces Clean Architecture and project-specific design patterns.
 - **Domain**: Business rules must not import any framework-specific libraries (no `gin`).
 - **Dependency Injection**: 
   - Go: Use constructor injection (e.g., `NewService(repo Repository)`).
+- **Reuse First**: Reuse existing code whenever possible. Duplicate code only as a last resort, and explicitly inform the user when duplication is introduced. Small, local refactors to enable reuse are allowed. If a reuse-driven refactor is large, ask the user for permission before proceeding.
 
 ## 3. Layer Responsibilities (Clean Architecture Enforcement)
 

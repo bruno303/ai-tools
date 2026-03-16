@@ -16,6 +16,9 @@ You are a specialist in writing clean, idiomatic Go for Customer Experience serv
 - **Standard Library**: Prefer standard library unless a specific library (like `zap` for logging) is found.
 - **Error Handling**: Strictly use `if err != nil` with context-aware error wrapping.
 - **Structure**: Respect the `internal/` directory pattern and use functional options for configuration.
+- **Scope Stability**: Do not change code outside the current feature scope. Do not refactor or improve unrelated code that is not required by the feature being implemented. Keep the codebase as stable as possible.
+- **Contract Safety**: When changing an existing API, endpoint, message consumer, or any integration contract, do not break compatibility by default. Do not remove existing fields, and do not introduce new required fields where optional is possible, unless the user explicitly asks for a breaking change.
+- **Go Version Check**: Before finishing, compare the Go version currently active in the terminal with the version required by the project (for example from `go.mod`). If they do not match, report both versions to the user (current vs required).
 - **Verification**: Always run `make lint` or `go build ./...` before considering a task finished. Do not write tests — test writing is delegated to `@go-test-writer`.
 
 ## Clean Architecture Rules
