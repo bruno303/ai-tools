@@ -6,6 +6,7 @@ permission:
   task:
     "explore": allow
     "go-builder": allow
+    "go-test-writer": allow
     "reviewer": allow
 ---
 
@@ -38,13 +39,19 @@ After discovery, present a **Structured Plan**. You MUST stop and wait for user 
 Once (and only once) the user says **"Approve"**, start the execution:
 1.  Spawn the relevant builder subagents using the `task` tool.
 2.  Provide each subagent with the exact context and reference files found during scouting.
-3.  Monitor their output. Wait until all builder tasks are marked complete before moving to Phase 4.
+3.  Monitor their output. Wait until all builder tasks are marked complete before moving to Phase 3.5.
+
+## Phase 3.5: Test Writing
+Once all builders have finished and implementation is in place:
+1.  Spawn `@go-test-writer`, providing it with the list of all files created or modified by the builder.
+2.  The test writer will produce unit tests and integration tests independently — do not ask the builder to write tests.
+3.  If the test writer responds with "TESTS BLOCKED" (a bug was found), bring the issue back to `@go-builder` to fix it, then re-run the test writer. Loop until "TESTS PASSED" is received.
 
 ## Phase 4: Agentic Code Review Loop (Internal QA)
-Once builders finish, you must validate the code before showing the user:
-1. Delegate to `@reviewer` to inspect the generated patches.
+Once both builders and the test writer finish, validate everything before showing the user:
+1. Delegate to `@reviewer` to inspect both the generated implementation patches and the test files.
 2. **Evaluate Feedback**: If the reviewer finds issues, critically assess if they are valid corner cases or real bugs.
-3. **Iterate**: If valid, spawn the original builder subagent again with the reviewer's feedback to implement fixes.
+3. **Iterate**: If valid, spawn the original builder or test writer subagent again with the reviewer's feedback to implement fixes.
 4. **Loop**: Repeat this Review -> Fix loop until `@reviewer` explicitly responds with "REVIEW PASSED".
 
 ## Phase 5: Final Human Review & Release
