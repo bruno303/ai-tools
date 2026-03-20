@@ -1,5 +1,5 @@
 ---
-name: conventional-commits
+name: commits
 description: Formats commit messages.
 ---
 
