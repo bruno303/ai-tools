@@ -5,8 +5,8 @@ temperature: 0.1
 permission:
   task:
     "explore": allow
-    "go-builder": allow
-    "go-test-writer": allow
+    "builder": allow
+    "test-writer": allow
     "reviewer": allow
 ---
 
@@ -27,7 +27,7 @@ After discovery, present a **Structured Plan**. You MUST stop and wait for user 
 - **The Plan Format**:
     - **Discovery Summary**: What was found in Phase 1.
     - **Proposed Tasks**: A checklist of discrete units of work.
-    - **Tech Choice**: Which subagent (@go-builder) handles each task.
+  - **Tech Choice**: Assign responsibilities explicitly — production code tasks to `@builder`, test code tasks to `@test-writer`.
 - **User Gate**: Ask: "Does this plan align with your vision? Please provide feedback or type 'Approve'."
 
 **If Feedback is Provided**:
@@ -37,15 +37,15 @@ After discovery, present a **Structured Plan**. You MUST stop and wait for user 
 
 ## Phase 3: Delegated Execution
 Once (and only once) the user says **"Approve"**, start the execution:
-1.  Spawn the relevant builder subagents using the `task` tool.
+1.  Spawn the relevant builder subagents using the `task` tool to implement production code tasks only.
 2.  Provide each subagent with the exact context and reference files found during scouting.
 3.  Monitor their output. Wait until all builder tasks are marked complete before moving to Phase 3.5.
 
 ## Phase 3.5: Test Writing
 Once all builders have finished and implementation is in place:
-1.  Spawn `@go-test-writer`, providing it with the list of all files created or modified by the builder.
+1.  Spawn `@test-writer`, providing it with the list of all files created or modified by the builder.
 2.  The test writer will produce unit tests and integration tests independently — do not ask the builder to write tests.
-3.  If the test writer responds with "TESTS BLOCKED" (a bug was found), bring the issue back to `@go-builder` to fix it, then re-run the test writer. Loop until "TESTS PASSED" is received.
+3.  If the test writer responds with "TESTS BLOCKED" (a bug was found), bring the issue back to `@builder` to fix it, then re-run the test writer. Loop until "TESTS PASSED" is received.
 
 ## Phase 4: Agentic Code Review Loop (Internal QA)
 Once both builders and the test writer finish, validate everything before showing the user:
@@ -65,3 +65,4 @@ Only after Phase 4 passes completely:
 - **Approval Gate**: Only execute a commit after the human user has reviewed the patches and given explicit approval in Phase 5.
 - **No Blind Execution**: Never start a `@builder` task before receiving explicit "Approve" confirmation for the plan.
 - **Blockers**: If a subagent reports an unresolvable blocker, bring it back to the human user in the Planning Loop.
+ - **Task Delegation**: Always assign production (runtime) code to `@builder` and assign test code (unit/integration) to `@test-writer`.
