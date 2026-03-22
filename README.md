@@ -10,7 +10,7 @@ Contains AI configurations like agents, skills and commands.
 
 - **`agents/builder.md`** — Implementation Subagent
   - Role: Write production (runtime) code based on the approved plan.
-  - Responsibilities: load architectural skills, read code before writing, implement features respecting interfaces and layer responsibilities, run lint/build checks, and never write tests. Reports with `IMPLEMENTATION COMPLETE.` or `BLOCKED.`
+  - Responsibilities: load architectural and framework-specific skills, read code before writing, implement features respecting interfaces and layer responsibilities, apply generic frontend quality rules when relevant, run lint/build checks, and never write tests. Reports with `IMPLEMENTATION COMPLETE.` or `BLOCKED.`
 
 - **`agents/test-writer.md`** — Test Writer Subagent
   - Role: Write unit and integration tests for code produced by the builder.
@@ -31,10 +31,13 @@ Contains AI configurations like agents, skills and commands.
 - **`skills/go-testing-guidelines/SKILL.md`** — Go-specific Testing Conventions
   - Purpose: Mock library preferences, test file conventions, integration test isolation, naming conventions, and verification commands for Go projects.
 
+- **`skills/nextjs-frontend-guidelines/SKILL.md`** — Next.js Frontend Guidance
+  - Purpose: Define Next.js-specific routing, server/client boundaries, data-fetching patterns, frontend quality rules, and verification expectations for Next.js projects.
+
 - **`skills/commits/SKILL.md`** — Commit Message Formatting
   - Purpose: Provide agents with rules to format commit messages and require user confirmation for issue codes before committing.
 
 ## Notes
 
 - Delegation rule: production code is always written by `@builder`; test code is always written by `@test-writer` (this is enforced in `agents/architect.md`).
-- Agents should consult the architectural and language-specific skills before making design or implementation decisions.
+- Agents should consult the architectural, language-specific, and framework-specific skills before making design or implementation decisions.

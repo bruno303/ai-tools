@@ -6,12 +6,12 @@ usage() {
 Usage: $0 [--clean] <target-dir>
 Or set the TARGET_DIR environment variable.
 
-This script copies all files from `agents/` into <target-dir>/agents/
-and copies each subfolder of `skills/` into <target-dir>/skills/<skill-name>/.
+This script installs all files from \`agents/\` into <target-dir>/agents/
+and installs each subfolder of \`skills/\` into <target-dir>/skills/<skill-name>/.
 Existing files are replaced.
 
 Options:
-  --clean, -c  Remove destination `agents/` and `skills/` before copying.
+  --clean, -c  Remove destination \`agents/\` and \`skills/\` before copying.
 EOF
 }
 

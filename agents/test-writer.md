@@ -5,6 +5,7 @@ permission:
   edit: allow
   bash:
     "go *": allow
+    "gofmt *": allow
     "make *": allow
     "*": ask
 ---
