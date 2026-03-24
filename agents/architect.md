@@ -167,6 +167,7 @@ CONSTRAINTS:
 - preserve interfaces
 - follow existing patterns
 - no tests
+- production-code verification only
 
 RELEVANT_FILES:
 - ...
@@ -177,6 +178,12 @@ OUT_OF_SCOPE:
 
 DONE_WHEN:
 - ...
+
+KNOWN_PATTERNS:
+- note when existing tests are intentionally outdated and must be updated by @test-writer after production changes
+
+VERIFICATION_COMMANDS:
+- explicit non-test validation commands only
 ```
 
 ## Expected Output (from @builder)
@@ -201,8 +208,9 @@ BLOCKERS:
 
 Rules
 * Execute respecting dependencies
-* Do NOT continue if a task is BLOCKED
+* Do NOT continue if a task is BLOCKED on a builder-scope issue
 * Collect all modified files globally
+* When tests are expected to change after production work, say so explicitly in `KNOWN_PATTERNS` and avoid passing test-suite commands to @builder
 * Do NOT proceed to testing until ALL builder tasks are OK
 
 # Phase 3.5: Test Writing

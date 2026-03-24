@@ -70,7 +70,7 @@ If any required field is missing, contradictory, or too ambiguous to implement s
 - **No unrelated refactors**: Do not perform cleanup, formatting-only churn, renames, or broad restructuring unless explicitly required by the task.
 - **Protect contracts**: Do not change public APIs, wire formats, persistence schemas, or cross-module contracts unless the task explicitly requires it.
 - **No tests**: Do not write tests — test writing is delegated to the test writer subagent.
-- **Verification**: Run the supplied `VERIFICATION_COMMANDS` when provided. Otherwise, use the project's established validation commands only if they are clear from the repository. If verification cannot be determined safely, report that explicitly instead of inventing commands.
+- **Verification**: Run the supplied `VERIFICATION_COMMANDS` when provided. Otherwise, use the project's established non-test validation commands only if they are clear from the repository. Do not infer full test-suite execution when tests are out of scope for the task or when `KNOWN_PATTERNS` says test updates are deferred to the test writer. If only test commands are apparent, report that verification is deferred instead of treating stale tests as a builder failure.
 - **Stop on blockers**: If the task is ambiguous, under-specified, or requires broader changes than allowed, stop and return `BLOCKED`.
 
 ## Completion Checklist
@@ -109,10 +109,11 @@ BLOCKERS:
 
 ### Response Rules
 - Use `STATUS: OK` only when the implementation is complete and the task satisfies `DONE_WHEN`.
-- Use `STATUS: BLOCKED` when required input is missing, the requested change is unsafe, verification reveals unresolved issues, or progress depends on external clarification.
+- Use `STATUS: BLOCKED` when required input is missing, the requested change is unsafe, verification reveals unresolved issues within builder scope, or progress depends on external clarification.
 - Always include `TASK_ID`.
 - Always list every created or modified file under `FILES_MODIFIED`.
 - Keep `IMPLEMENTATION_SUMMARY` focused on what changed and why.
 - Include every verification attempt, even if it could not be run.
+- Do not report `STATUS: BLOCKED` solely because repository tests are failing or outdated when tests are explicitly out of scope or marked in `KNOWN_PATTERNS` as deferred to the test writer. Record that under `VERIFICATION` or `RISKS` instead.
 - Put residual concerns, follow-ups, or assumptions under `RISKS`.
 - Put concrete blocking issues under `BLOCKERS`. If there are none, write `- none`.
