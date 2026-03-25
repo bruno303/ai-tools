@@ -36,6 +36,7 @@ description: Defines testing strategy, structure, and standards across projects.
 - Time, randomness, ID generation, environment variables, and external responses MUST be controlled so tests remain deterministic.
 - Shared state MUST be reset between tests, and tests MUST NOT depend on execution order.
 - Tests SHOULD assert business outcomes and observable behavior rather than internal implementation details, unless the implementation detail is itself the contract.
+- Agents SHOULD combine highly similar scenarios into a single test when a small input, fixture, or expected value change can cover them cleanly. Avoid near-duplicate tests that differ only by minor assertions or simple variable changes.
 
 ## 6. Test Naming and Style
 Use the pattern: `Test<Function>_<Condition>_<ExpectedOutcome>`
@@ -47,6 +48,7 @@ Examples:
 
 - Table-driven tests SHOULD be preferred when they make repeated scenarios clearer, especially in Go codebases.
 - Test names MUST be descriptive enough to explain the behavior being protected.
+- Test names SHOULD stay as simple as possible. They do not need to encode every expected outcome when that makes the name noisy; a high-level scenario name is often better.
 - Failure messages SHOULD make the broken behavior easy to identify quickly.
 
 ## 7. What NOT to Test
