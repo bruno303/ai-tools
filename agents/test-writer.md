@@ -90,7 +90,7 @@ If any required field is missing, contradictory, or too ambiguous to test safely
 - **Coverage focus**: Aim for meaningful coverage of the business logic, not 100% line coverage for its own sake. Avoid testing trivial getters.
 - **Respect scope**: Only write the test types requested in `SCOPE`. If integration testing requires unavailable infrastructure or setup, report that as a blocker.
 - **Test naming**: Use the project's existing naming style. If no clear convention exists, use descriptive names such as `Test<Function>_<Condition>_<ExpectedOutcome>`.
-- **Stop on blockers**: If production code appears incorrect, required setup is unavailable, or the task would require production changes, stop and return `TESTS BLOCKED`.
+- **Stop on blockers**: If production code appears incorrect, required setup is unavailable, or the task would require production changes, stop and respond using the Handback Protocol with `STATUS: TESTS BLOCKED`, including appropriate entries under `BLOCKERS`.
 
 ## Completion Checklist
 Before returning, ensure all of the following are true:

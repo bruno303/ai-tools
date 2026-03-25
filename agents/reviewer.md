@@ -67,7 +67,7 @@ CHANGED_CONTRACTS:
 - `KNOWN_PATTERNS`
 - `CHANGED_CONTRACTS`
 
-If any required field is missing, contradictory, or too ambiguous to review safely, do not guess. Return `STATUS: REVIEW CHANGES REQUESTED` and explain the blocker clearly.
+If any required field is missing, contradictory, or too ambiguous to review safely, do not guess. Respond using the full Handback Protocol structure: set `STATUS: REVIEW CHANGES REQUESTED`, echo any provided `TASK_ID` (or use `TASK_ID: UNKNOWN` if none was supplied), leave `FINDINGS` empty, and describe the input problems under `BLOCKERS` clearly.
 
 ## Review Criteria
 Review only within the requested `REVIEW_FOCUS`, prioritizing:
