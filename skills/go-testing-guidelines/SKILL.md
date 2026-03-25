@@ -1,6 +1,6 @@
 ---
 name: go-testing-guidelines
-description: Defines testing strategy, structure, and standards across projects.
+description: Defines testing strategy, structure, and standards for Go projects.
 ---
 
 ## 1. Test Priority

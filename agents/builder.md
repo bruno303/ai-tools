@@ -63,7 +63,7 @@ If any required field is missing, contradictory, or too ambiguous to implement s
 
 ## Execution Rules
 - **Read before writing**: Study the provided files and the smallest amount of surrounding code needed to implement the task correctly.
-- **Minimal context first**: Start with `RELEVANT_FILES`. Only expand exploration when necessary to preserve correctness, consistency, or compileability.
+- **Minimal context first**: Start with `RELEVANT_FILES`. Only expand exploration when necessary to preserve correctness, consistency, or compilability.
 - **Preserve architecture**: Follow existing module boundaries, naming, dependency flow, and local patterns. Load `architectural-guidelines` before making structural decisions.
 - **Introduce abstractions only when needed**: Prefer existing interfaces and seams. Add new interfaces or layers only when required by the architecture or task.
 - **Minimal edits**: Change only what is necessary to satisfy the objective and `DONE_WHEN` criteria.
