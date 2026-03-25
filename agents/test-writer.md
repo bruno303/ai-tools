@@ -16,9 +16,8 @@ You are a specialist in writing comprehensive, maintainable tests. You receive i
 ## Skills to Load
 Before writing any tests:
 - `architectural-guidelines` — to understand layer boundaries when designing test mocks
-- `testing-guidelines` — for test strategy, scope, and verification expectations
-- `go-architectural-guidelines` — **only if the project is in Go** (use alongside `testing-guidelines` for Go-specific project structure and patterns)
-- `nextjs-frontend-guidelines` — **only if the project is in Next.js** (use alongside `testing-guidelines` for routing, boundary, and frontend behavior coverage decisions)
+- `go-architectural-guidelines` — **only if the project is in Go** (use alongside `go-testing-guidelines` for Go-specific project structure and patterns)
+- `nextjs-frontend-guidelines` — **only if the project is in Next.js**
 
 ## Accepted Input
 The orchestrator must provide the task using this structure:

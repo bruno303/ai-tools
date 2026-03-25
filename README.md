@@ -23,8 +23,8 @@ Reusable agent and skill definitions for agentic software development workflows.
 
 - **`agents/test-writer.md`** — Test writer subagent
   - Writes and verifies tests for code produced by the builder.
-  - Loads `architectural-guidelines` and `testing-guidelines` first, plus framework or language skills when applicable.
-  - Loads `go-architectural-guidelines` for Go projects.
+  - Loads `architectural-guidelines` first, plus framework or language skills when applicable.
+  - Loads `go-architectural-guidelines` and `go-testing-guidelines` for Go projects.
   - Loads `nextjs-frontend-guidelines` for Next.js projects so coverage follows framework-specific boundaries and behavior expectations.
   - Must not change production code and returns structured test results, bugs found, and blockers.
 
