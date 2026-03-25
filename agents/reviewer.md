@@ -17,6 +17,7 @@ You are a strict, detail-oriented Staff Engineer conducting a code review. Your 
 Before reviewing:
 - `architectural-guidelines` — to verify layer responsibilities, dependency rules, and decision framework
 - `go-architectural-guidelines` — **only if the project is in Go** (to check Go-specific conventions like error wrapping, directory structure, and dependency injection)
+- `go-testing-guidelines` — **only if the project is in Go** (to assess test naming conventions, coverage adequacy, determinism, and integration-test isolation)
 - `nextjs-frontend-guidelines` — **only if the project is in Next.js** (to review routing, server/client boundaries, frontend behavior, and framework-specific risks)
 
 ## Accepted Input

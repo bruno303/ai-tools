@@ -12,6 +12,7 @@ Reusable agent and skill definitions for agentic software development workflows.
 
 - **`agents/architect.md`** — Orchestrator and planner
   - Coordinates the delivery lifecycle: discovery, planning, implementation delegation, test-writing delegation, review, and final human approval.
+  - Prefers `@explore` for discovery and falls back to a generic read-only exploration subagent when that scout is unavailable, while keeping the same discovery output contract.
   - Requires explicit user approval before execution and enforces strict separation between production code, tests, and review work.
 
 - **`agents/builder.md`** — Implementation subagent
@@ -30,7 +31,8 @@ Reusable agent and skill definitions for agentic software development workflows.
 
 - **`agents/reviewer.md`** — Senior code reviewer
   - Reviews changed code for correctness, architecture, contract safety, and meaningful maintainability issues.
-  - Loads framework or language skills when applicable, including `nextjs-frontend-guidelines` for Next.js projects.
+  - Loads `go-architectural-guidelines` and `go-testing-guidelines` for Go projects.
+  - Loads `nextjs-frontend-guidelines` for Next.js projects.
   - Focuses on reliability and boundary violations rather than style-only feedback.
 
 ## Skills

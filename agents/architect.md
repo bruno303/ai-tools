@@ -39,6 +39,7 @@ Understand the system before proposing changes.
 
 ## Action
 Delegate to `@explore` immediately.
+If `@explore` is unavailable in the current runtime, use the platform's generic read-only exploration subagent instead and require the exact same discovery output schema.
 
 ## Required Output (from @explore)
 
@@ -74,6 +75,7 @@ RECOMMENDED_TASKS:
 
 ## Behavior
 * Do NOT proceed without STATUS: OK
+* If the fallback exploration subagent is used, verify that it returns every required field in the discovery schema before planning. If the output is incomplete or malformed, treat discovery as BLOCKED and ask for a corrected scout output.
 * If BLOCKED, return to user with:
   * blocker
   * missing info
@@ -199,6 +201,11 @@ FILES_MODIFIED:
 IMPLEMENTATION_SUMMARY:
 - ...
 
+VERIFICATION:
+- command: ...
+  result: passed | failed | not_run
+  notes: ...
+
 RISKS:
 - ...
 
@@ -285,6 +292,8 @@ If `TESTS BLOCKED`:
 2. Fix
 3. Re-run test writer
 
+When routing a bug back to `@builder`, send a normal builder task payload with a new `TASK_ID`, preserve the original constraints and out-of-scope boundaries, and set `OBJECTIVE` and `DONE_WHEN` from the reported bug.
+
 Constraint
 * Max 3 iterations per failing area
 * If still failing → escalate to user
@@ -365,10 +374,12 @@ BLOCKERS:
 
 ## Loop
 
-If `CHANGES REQUESTED`:
+If `REVIEW CHANGES REQUESTED`:
 
 1. Route feedback to correct agent (@builder or @test-writer)
 2. Re-run review
+
+When routing a finding back to `@builder` or `@test-writer`, send that agent its normal task payload with a new `TASK_ID`, preserve the original constraints and scope boundaries, and set the remediation objective from the reported finding.
 
 ## Constraint
 * Max 3 review iterations
