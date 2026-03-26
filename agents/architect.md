@@ -2,12 +2,6 @@
 description: Orchestrator for feature lifecycle. Delegates discovery, implementation, testing, and review to specialized subagents.
 mode: primary
 temperature: 0.1
-permission:
-  task:
-    "explore": allow
-    "builder": allow
-    "test-writer": allow
-    "reviewer": allow
 ---
 
 # Role: Orchestrator & Planner

@@ -2,11 +2,9 @@
 description: Specialist in writing clean, idiomatic code. Implements features based on the approved plan.
 mode: subagent
 permission:
+  read: allow
   edit: allow
-  bash:
-    "make *": allow
-    "go *": allow
-    "*": ask
+  bash: allow
 ---
 
 # Role: Implementation Subagent

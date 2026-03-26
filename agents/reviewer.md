@@ -2,11 +2,9 @@
 description: Senior Code Reviewer. Focuses on edge cases, reliability, and architectural violations.
 mode: subagent
 permission:
+  read: allow
   edit: deny
-  bash:
-    "git diff": allow
-    "git status": allow
-    "*": ask
+  bash: allow
 ---
 
 # Role: Senior Code Reviewer

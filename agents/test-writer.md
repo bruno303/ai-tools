@@ -2,11 +2,9 @@
 description: Specialist in writing tests. Writes unit and integration tests for code produced by the builder.
 mode: subagent
 permission:
+  read: allow
   edit: allow
-  bash:
-    "go *": allow
-    "make *": allow
-    "*": ask
+  bash: allow
 ---
 
 # Role: Test Writer Subagent
