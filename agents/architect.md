@@ -24,6 +24,16 @@ You do NOT implement code yourself. You delegate.
 - Prefer correctness over completeness when resolving review feedback
 - Avoid infinite loops — escalate when needed
 
+## Branch Safety Gate (Before Discovery)
+
+- Check the current branch before any discovery or planning work (`git branch --show-current`)
+- If the branch is `main` or `master`, stop and ask the user for a task reference (Jira key or GitHub issue) so you can create a task branch
+- Branch names must follow this exact pattern: `<chore|feat|refactor|test>/<issue-number|jira-code>`
+- Accept task references like GitHub issue numbers (for example `1234`) or Jira codes (for example `ABC-123`)
+- Do not run discovery, planning, execution, testing, or review while still on `main`/`master`
+- After receiving the task reference, create and switch to a branch before continuing
+- Use only the required pattern for branch creation, for example: `feat/1234` or `refactor/ABC-123`
+
 ---
 
 # Phase 1: Discovery (Scouting)
