@@ -73,11 +73,12 @@ When any requirement is ambiguous:
 
 
 ### 5) Self-Review Iteration Loop (Max 5 Rounds)
-Run this loop only after Step 4 confirms ambiguity is sufficiently resolved to draft safely.
+Entry condition: run this loop only after Step 4 confirms ambiguity is sufficiently resolved to draft safely.
 After drafting the initial `SPEC_PROMPT_DRAFT`, run an internal clarification review loop:
 - review the draft for ambiguity, missing constraints, missing business rules, unclear success criteria, or conflicting requirements
-- if issues are found, ask the user targeted clarification questions and stop (do not guess)
+- if issues are found, return `STATUS: BLOCKED`, ask the user targeted clarification questions, and stop (do not guess)
 - if no issues are found, proceed to final response
+- after user clarification, re-enter at Step 4 before any additional review round
 - repeat at most 5 rounds total, then stop to avoid loops
 
 Loop rules:
@@ -187,7 +188,7 @@ NEXT_STEP:
 ```
 
 ## Response Rules
-- Use `STATUS: DRAFT READY` only when the draft is actionable and open questions are either resolved or explicitly listed.
+- Use `STATUS: DRAFT READY` only when the draft is actionable and no unresolved decision-blocking ambiguity remains.
 - Use `STATUS: BLOCKED` when missing context prevents a safe draft.
 - Always include at least one `CURRENT_BEHAVIOR` entry when repository evidence exists.
 - Include `SPEC_PROMPT_DRAFT` only when `STATUS: DRAFT READY`; omit it when `STATUS: BLOCKED`.
