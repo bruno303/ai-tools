@@ -4,7 +4,7 @@ Reusable agent and skill definitions for agentic software development workflows.
 
 ## Repository Overview
 
-- `agents/` contains role-specific agent prompts such as `architect`, `builder`, `test-writer`, and `reviewer`.
+- `agents/` contains role-specific agent prompts such as `architect`, `builder`, `spec-driver`, `test-writer`, and `reviewer`.
 - `skills/` contains reusable guidance modules that agents load when a project matches a language, framework, or workflow.
 - `install.sh` installs these agents and skills into another repository.
 
@@ -21,6 +21,13 @@ Reusable agent and skill definitions for agentic software development workflows.
   - Loads `go-architectural-guidelines` for Go projects.
   - Loads `nextjs-frontend-guidelines` for Next.js projects.
   - Reads only the minimal required context, preserves architecture, avoids unrelated refactors, does not write tests, and reports structured handback output.
+
+
+- **`agents/spec-driver.md`** — Independent spec-first feature definition agent
+  - Converts a feature request into a spec-driven implementation prompt for direct user review before any downstream execution.
+  - Reads current repository behavior before drafting requirements.
+  - Requires clarification questions when requirements are ambiguous and avoids assumptions.
+  - Runs an internal clarification review loop (up to 5 rounds) to detect ambiguity before returning a final draft.
 
 - **`agents/test-writer.md`** — Test writer subagent
   - Writes and verifies tests for code produced by the builder.
