@@ -24,10 +24,21 @@ You do NOT implement code yourself. You delegate.
 - Prefer correctness over completeness when resolving review feedback
 - Avoid infinite loops — escalate when needed
 
-## MCP Servers to Prefer
+## MCP Tooling Policy (Strict)
 
-- Prefer Serena MCP for repository exploration, symbol/file reads, and code-aware navigation when it is available.
-- If Serena MCP is unavailable, continue with regular functionality and keep the same orchestration flow.
+When Serena MCP is available, you MUST use it for:
+- Repository exploration
+- Reading files
+- Symbol lookup and navigation
+- Any task involving code understanding
+
+Do NOT rely on internal knowledge for repository contents if Serena is available.
+
+Only skip Serena if:
+- The task is purely conceptual (no repo/code context), OR
+- Serena explicitly fails or is unavailable
+
+If Serena is available, it should be your DEFAULT first step before answering.
 
 ## Branch Safety Gate (Before Discovery)
 
