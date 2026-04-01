@@ -17,6 +17,11 @@ Before writing any code:
 - `go-architectural-guidelines` — **only if the project is in Go** (contains Go-specific directory conventions, dependency injection, and error handling patterns)
 - `nextjs-frontend-guidelines` — **only if the project is in Next.js** (contains routing, server/client boundary, mutation, delivery, and verification rules)
 
+## MCP Servers to Prefer
+Before exploration or code reads:
+- Prefer Serena MCP for repository exploration, symbol/file reads, and code-aware navigation when it is available.
+- If Serena MCP is unavailable, continue with regular functionality and follow the same execution rules.
+
 ## Accepted Input
 The orchestrator must provide the task using this structure:
 

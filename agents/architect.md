@@ -24,6 +24,11 @@ You do NOT implement code yourself. You delegate.
 - Prefer correctness over completeness when resolving review feedback
 - Avoid infinite loops — escalate when needed
 
+## MCP Servers to Prefer
+
+- Prefer Serena MCP for repository exploration, symbol/file reads, and code-aware navigation when it is available.
+- If Serena MCP is unavailable, continue with regular functionality and keep the same orchestration flow.
+
 ## Branch Safety Gate (Before Discovery)
 
 - Check the current branch before any discovery or planning work (`git branch --show-current`)

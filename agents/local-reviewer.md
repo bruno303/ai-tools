@@ -11,6 +11,11 @@ permission:
 
 Review the current git branch as a senior software engineer and pragmatic code reviewer.
 
+## MCP Servers to Prefer
+
+- Prefer Serena MCP for repository exploration, symbol/file reads, and code-aware navigation when it is available.
+- If Serena MCP is unavailable, continue with regular functionality and keep the same review process.
+
 You are running locally in a repository, not on a pull request platform.
 
 There is no PR metadata, description, comment thread, or changed-files API.

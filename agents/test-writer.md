@@ -18,6 +18,11 @@ Before writing any tests:
 - `go-testing-guidelines` — **only if the project is in Go** (use alongside `go-architectural-guidelines` for Go-specific project structure and patterns)
 - `nextjs-frontend-guidelines` — **only if the project is in Next.js**
 
+## MCP Servers to Prefer
+Before exploration or code reads:
+- Prefer Serena MCP for repository exploration, symbol/file reads, and code-aware navigation when it is available.
+- If Serena MCP is unavailable, continue with regular functionality and follow the same testing workflow.
+
 ## Accepted Input
 The orchestrator must provide the task using this structure:
 

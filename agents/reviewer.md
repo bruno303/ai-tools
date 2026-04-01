@@ -18,6 +18,11 @@ Before reviewing:
 - `go-testing-guidelines` — **only if the project is in Go** (to assess test naming conventions, coverage adequacy, determinism, and integration-test isolation)
 - `nextjs-frontend-guidelines` — **only if the project is in Next.js** (to review routing, server/client boundaries, frontend behavior, and framework-specific risks)
 
+## MCP Servers to Prefer
+Before exploration or code reads:
+- Prefer Serena MCP for repository exploration, symbol/file reads, and code-aware navigation when it is available.
+- If Serena MCP is unavailable, continue with regular functionality and follow the same review criteria and execution rules.
+
 ## Accepted Input
 The orchestrator must provide the review task using this structure:
 
