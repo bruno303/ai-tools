@@ -12,12 +12,13 @@ Reusable agent and skill definitions for agentic software development workflows.
 
 - **`agents/architect.md`** — Orchestrator and planner
   - Coordinates the delivery lifecycle: discovery, planning, implementation delegation, test-writing delegation, review, and final human approval.
+  - Loads shared operating rules plus applicable architecture/framework skills instead of restating common repository-inspection policy inline.
   - Prefers `@explore` for discovery and falls back to a generic read-only exploration subagent when that scout is unavailable, while keeping the same discovery output contract.
   - Requires explicit user approval before execution and enforces strict separation between production code, tests, and review work.
 
 - **`agents/builder.md`** — Implementation subagent
   - Writes production code from an approved task payload.
-  - Loads `architectural-guidelines` first, plus framework or language skills when applicable.
+  - Loads shared operating rules first, then `architectural-guidelines`, plus framework or language skills when applicable.
   - Loads `go-architectural-guidelines` for Go projects.
   - Loads `nextjs-frontend-guidelines` for Next.js projects.
   - Reads only the minimal required context, preserves architecture, avoids unrelated refactors, does not write tests, and reports structured handback output.
@@ -25,24 +26,29 @@ Reusable agent and skill definitions for agentic software development workflows.
 
 - **`agents/spec-driver.md`** — Independent spec-first feature definition agent
   - Converts a feature request into a spec-driven implementation prompt for direct user review before any downstream execution.
+  - Loads shared operating rules and applicable architecture/framework skills before drafting repo-aware requirements.
   - Reads current repository behavior before drafting requirements.
   - Requires clarification questions when requirements are ambiguous and avoids assumptions.
   - Runs an internal clarification review loop (up to 5 rounds) to detect ambiguity before returning a final draft.
 
 - **`agents/test-writer.md`** — Test writer subagent
   - Writes and verifies tests for code produced by the builder.
-  - Loads `architectural-guidelines` first, plus framework or language skills when applicable.
+  - Loads shared operating rules first, then `architectural-guidelines`, plus framework or language skills when applicable.
   - Loads `go-architectural-guidelines` and `go-testing-guidelines` for Go projects.
   - Loads `nextjs-frontend-guidelines` for Next.js projects so coverage follows framework-specific boundaries and behavior expectations.
   - Must not change production code and returns structured test results, bugs found, and blockers.
 
 - **`agents/reviewer.md`** — Senior code reviewer
   - Reviews changed code for correctness, architecture, contract safety, and meaningful maintainability issues.
+  - Loads shared operating rules plus applicable architecture/framework skills before reviewing repository code.
   - Loads `go-architectural-guidelines` and `go-testing-guidelines` for Go projects.
   - Loads `nextjs-frontend-guidelines` for Next.js projects.
   - Focuses on reliability and boundary violations rather than style-only feedback.
 
 ## Skills
+
+- **`skills/agent-operating-rules/SKILL.md`** — Shared repo-aware operating rules
+  - Defines Serena-first repository inspection, minimal-context exploration, source-of-truth lookup, stack detection, shared ambiguity handling, and reusable skill-loading workflow.
 
 - **`skills/architectural-guidelines/SKILL.md`** — Clean Architecture guidance
   - Defines dependency direction, layer responsibilities, repository rules, anti-patterns, testing expectations, and onboarding checks.
@@ -65,6 +71,6 @@ Reusable agent and skill definitions for agentic software development workflows.
 - Production code is always written by `@builder`.
 - Test code is always written by `@test-writer`.
 - Planning and approval flow are enforced by `@architect`.
-- Agents should load architectural, language-specific, and framework-specific skills before making design, implementation, or test decisions.
+- Agents should load shared operating rules plus architectural, language-specific, and framework-specific skills before making design, implementation, or test decisions.
 - Review decisions should use the same framework-specific skills as implementation and test-writing when those skills apply.
 - Framework-specific skills are conditional: for example, the Next.js skill should only be loaded when the target repository is clearly a Next.js project.
