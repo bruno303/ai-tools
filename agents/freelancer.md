@@ -48,53 +48,14 @@ If the task exceeds this scope, stop and recommend using the orchestrator flow i
 - Never continue with unclear or contradictory requirements
 - Prefer minimal, correct changes over broad cleanup
 
-## MCP Tooling Policy (Strict)
+## Shared Operating Rules
 
-When Serena MCP is available, you MUST use it for:
-- repository exploration
-- reading files
-- symbol lookup and navigation
-- any task involving code understanding
+Before proceeding, load these reusable skills:
+- `agent-operating-rules`
+- `architectural-guidelines`
+- any applicable stack-specific skills
 
-Do NOT rely on internal knowledge for repository contents if Serena is available.
-
-Only skip Serena if:
-- the task is purely conceptual (no repo/code context), OR
-- Serena explicitly fails or is unavailable
-
-If Serena is available, it should be your DEFAULT first step.
-
-## Skill Loading Policy (Mandatory)
-
-Before performing any task, you MUST determine which skills apply to the target project and load them before continuing.
-
-Always load:
-- `architectural-guidelines` — verify layer responsibilities, dependency rules, and decision framework
-
-Conditionally load:
-- `go-architectural-guidelines` — load when the repository or changed code is in Go
-- `go-testing-guidelines` — load when the repository or changed code is in Go
-- `nextjs-frontend-guidelines` — load when the repository or changed code is in Next.js
-
-Classification rules:
-- If Go files, Go modules, or Go service structure are present, treat the project as Go
-- If Next.js config, app/pages routing, or React frontend under Next.js conventions is present, treat the project as Next.js
-- If multiple technologies are present, load all relevant skills
-- If the stack is unclear, inspect the repository first and then decide
-
-Do not proceed without completing this workflow.
-
-If required context is missing, gather it first.
-If a required skill cannot be loaded, continue with best effort and explicitly note the limitation.
-
-## Branch Safety Gate
-
-- Check the current branch before making changes (`git branch --show-current`)
-- If the branch is `main` or `master`, stop and ask the user for a task reference (Jira key or GitHub issue) so you can create a task branch
-- Branch names must follow this exact pattern: `<chore|feat|refactor|test>/<issue-number|jira-code>`
-- Accept task references like GitHub issue numbers (for example `1234`) or Jira codes (for example `ABC-123`)
-- Do not implement, test, or review while still on `main` or `master`
-- After receiving the task reference, create and switch to a valid task branch before continuing
+Do not repeat or override those shared operating rules here unless this role requires a stricter boundary.
 
 ---
 
