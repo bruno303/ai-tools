@@ -19,8 +19,7 @@
 - Keep exact handback schemas and status labels stable unless you intentionally update the owning prompt everywhere it is relied on.
 - Preserve role boundaries encoded in the prompts:
 - `architect` delegates and requires explicit `Approve` before execution.
-- `builder` does not write tests.
-- `test-writer` does not change production code.
+- `builder` writes production code and tests.
 - `reviewer` is read-only.
 - `freelancer` is the single-agent full-delivery path for small tasks.
 

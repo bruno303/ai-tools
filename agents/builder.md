@@ -70,15 +70,15 @@ If any required field is missing, contradictory, or too ambiguous to implement s
 - **Minimal edits**: Change only what is necessary to satisfy the objective and `DONE_WHEN` criteria.
 - **No unrelated refactors**: Do not perform cleanup, formatting-only churn, renames, or broad restructuring unless explicitly required by the task.
 - **Protect contracts**: Do not change public APIs, wire formats, persistence schemas, or cross-module contracts unless the task explicitly requires it.
-- **No tests**: Do not write tests — test writing is delegated to the test writer subagent.
-- **Verification**: Run the supplied `VERIFICATION_COMMANDS` when provided. Otherwise, use the project's established non-test validation commands only if they are clear from the repository. Do not infer full test-suite execution when tests are out of scope for the task or when `KNOWN_PATTERNS` says test updates are deferred to the test writer. If only test commands are apparent, report that verification is deferred instead of treating stale tests as a builder failure.
+- **Write tests**: Implement both production code and tests for the feature.
+- **Verification**: Run the supplied `VERIFICATION_COMMANDS` when provided. Otherwise, use the project's established validation commands. Run test commands to verify tests pass.
 - **Stop on blockers**: If the task is ambiguous, under-specified, or requires broader changes than allowed, stop and respond using the Handback Protocol with `STATUS: BLOCKED` and a clear explanation of the blocker.
 
 ## Completion Checklist
 Before returning, ensure all of the following are true:
 - The `OBJECTIVE` is implemented.
 - Every `DONE_WHEN` item is addressed.
-- No tests were added.
+- Tests are included where needed.
 - No unrelated files were changed.
 - Verification was attempted and reported.
 

@@ -69,8 +69,7 @@ description: Next.js-specific frontend architecture, App Router conventions, and
 - Agents MUST optimize for perceived performance by limiting client bundle size, avoiding unnecessary hydration, and preventing avoidable re-renders.
 
 ## 9. Testing Guidance
-- `@builder` MUST use these rules to preserve testable server/client boundaries.
-- `@test-writer` MUST use these rules when deciding what Next.js behavior deserves coverage.
+- `@builder` MUST use these rules to preserve testable server/client boundaries and decide what Next.js behavior deserves coverage.
 - Tests SHOULD focus on meaningful application behavior rather than framework internals.
 - Server component tests SHOULD verify rendered outcomes, fallback states, and route-level behavior without re-testing Next.js itself.
 - Client component tests SHOULD cover user interactions, local state transitions, accessibility behavior, and observable mutation states.

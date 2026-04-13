@@ -84,7 +84,7 @@ Review only within the requested `REVIEW_FOCUS`, prioritizing:
 - **Evidence-based findings**: Every finding must point to a concrete file and explain the specific risk. Include a line number when available.
 - **Focus on material issues**: Report only correctness issues, contract violations, missing coverage for changed behavior, risky architectural drift, or major maintainability problems.
 - **Ignore noise**: Do not report stylistic preferences, formatting issues, naming bikeshedding, or trivial refactor suggestions.
-- **Be action-oriented**: Each finding must include a practical fix direction that the orchestrator can route to `@builder` or `@test-writer`.
+- **Be action-oriented**: Each finding must include a practical fix direction that the orchestrator can route to `@builder`.
 - **Respect scope**: Do not invent requirements outside the review input. If a concern is speculative and unsupported by the provided code, do not report it.
 
 ## Severity Guidance
