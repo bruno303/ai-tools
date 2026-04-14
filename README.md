@@ -36,6 +36,7 @@ Reusable agent and skill definitions for agentic software development workflows.
   - Loads shared operating rules plus applicable architecture/framework skills before reviewing repository code.
   - Loads `go-architectural-guidelines` and `go-testing-guidelines` for Go projects.
   - Loads `nextjs-frontend-guidelines` for Next.js projects.
+  - Accepts a minimal review handoff from `@architect` using changed files, a short summary, and optional review focus.
   - Focuses on reliability and boundary violations rather than style-only feedback.
 
 ## Skills
