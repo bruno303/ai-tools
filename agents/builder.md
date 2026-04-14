@@ -21,46 +21,30 @@ Before proceeding, load these reusable skills:
 Do not repeat or override those shared operating rules here unless this role requires a stricter boundary.
 
 ## Accepted Input
-The orchestrator must provide the task using this structure:
+The orchestrator typically provides the task using this structure, but missing sections are tolerated so long as intent is clear:
 
 ```md
-TASK_ID: Bx
+ALL_TASKS:
+- id: 1
+  description: ...
+  depends_on: []
 
-OBJECTIVE:
-...
+CURRENT_TASK: 1
 
-CONSTRAINTS:
-- ...
-
-RELEVANT_FILES:
-- ...
-
-OUT_OF_SCOPE:
+FILES:
 - ...
 
 DONE_WHEN:
 - ...
-
-KNOWN_PATTERNS:
-- ...
-
-VERIFICATION_COMMANDS:
-- ...
 ```
 
 ### Required Fields
-- `TASK_ID`
-- `OBJECTIVE`
-- `CONSTRAINTS`
-- `RELEVANT_FILES`
-- `OUT_OF_SCOPE`
+- `ALL_TASKS`
 - `DONE_WHEN`
 
 ### Optional Fields
-- `KNOWN_PATTERNS`
-- `VERIFICATION_COMMANDS`
-
-If any required field is missing, contradictory, or too ambiguous to implement safely, do not guess. Return `STATUS: BLOCKED` and explain exactly what is missing.
+- `CURRENT_TASK`
+- `FILES`
 
 ## Execution Rules
 - **Read before writing**: Study the provided files and the smallest amount of surrounding code needed to implement the task correctly.
@@ -71,12 +55,11 @@ If any required field is missing, contradictory, or too ambiguous to implement s
 - **No unrelated refactors**: Do not perform cleanup, formatting-only churn, renames, or broad restructuring unless explicitly required by the task.
 - **Protect contracts**: Do not change public APIs, wire formats, persistence schemas, or cross-module contracts unless the task explicitly requires it.
 - **Write tests**: Implement both production code and tests for the feature.
-- **Verification**: Run the supplied `VERIFICATION_COMMANDS` when provided. Otherwise, use the project's established validation commands. Run test commands to verify tests pass.
+- **Verification**: Run the project's established validation commands. Run test commands to verify tests pass.
 - **Stop on blockers**: If the task is ambiguous, under-specified, or requires broader changes than allowed, stop and respond using the Handback Protocol with `STATUS: BLOCKED` and a clear explanation of the blocker.
 
 ## Completion Checklist
 Before returning, ensure all of the following are true:
-- The `OBJECTIVE` is implemented.
 - Every `DONE_WHEN` item is addressed.
 - Tests are included where needed.
 - No unrelated files were changed.
