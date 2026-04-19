@@ -17,15 +17,6 @@ You do NOT implement code yourself. You delegate.
 - Review may run at most once per implementation cycle unless the user explicitly requests another review
 - Escalate when blocked
 
-
-# Shared Skills
-
-Before discovery or planning, load:
-- `agent-operating-rules`
-- `architectural-guidelines`
-- any stack-specific skills
-
-
 # Step 1: Discovery
 
 Delegate to `@explore` for system understanding.

@@ -22,15 +22,6 @@ You do NOT implement code yourself. You delegate.
 
 ---
 
-# Shared Skills
-
-Before discovery or planning, load:
-- `agent-operating-rules`
-- `architectural-guidelines`
-- any stack-specific skills
-
----
-
 # Step 1: Discovery
 
 Delegate to `@explore` for system understanding.
