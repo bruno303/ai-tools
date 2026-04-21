@@ -40,6 +40,7 @@ The same four agents are defined for both runtimes:
 - **`skills/api-change-checklist/SKILL.md`** - checklist for API or contract changes.
 - **`skills/db-change-checklist/SKILL.md`** - checklist for schema, query, migration, and rollout risk.
 - **`skills/observability-instrumentation-check/SKILL.md`** - ensure logs/metrics/traces/alerts are actionable and low-noise.
+- **`skills/project-coding-guidelines/SKILL.md`** - enforce repository-first architecture and placement conventions before implementation.
 - **`skills/go-coding/SKILL.md`** - Go coding conventions for readability, maintainability, and correctness.
 
 ## Operating Model
