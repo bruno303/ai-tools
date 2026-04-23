@@ -1,85 +1,122 @@
 ---
 name: go-coding
-description: Use when writing or reviewing Go code to ensure it follows common conventions for readability, maintainability, and correctness.
+description: Implements concurrent Go patterns using goroutines and channels, designs and builds microservices with gRPC or REST, optimizes Go application performance with pprof, and enforces idiomatic Go with generics, interfaces, and robust error handling. Use when building Go applications requiring concurrent programming, microservices architecture, or high-performance systems. Invoke for goroutines, channels, Go generics, gRPC integration, CLI tools, benchmarks, or table-driven testing.
+license: MIT
+metadata:
+  author: https://github.com/Jeffallan
+  version: "1.1.0"
+  domain: language
+  triggers: Go, Golang, goroutines, channels, gRPC, microservices Go, Go generics, concurrent programming, Go interfaces
+  role: specialist
+  scope: implementation
+  output-format: code
+  related-skills: devops-engineer, microservices-architect, test-master
 ---
 
-# When to use
-Apply these Go conventions when reading, generating, or reviewing Go code.
+# Golang Pro
 
-# Function signatures
-- Accept `context.Context` as the first parameter when the function need it
-- Do not store `context.Context` in structs.
-- Do not pass nil context; use `context.Background()` or `context.TODO()` at process edges.
+Senior Go developer with deep expertise in Go 1.21+, concurrent programming, and cloud-native microservices. Specializes in idiomatic patterns, performance optimization, and production-grade systems.
 
-# Errors
-- Return errors explicitly.
-- Wrap unexpected errors with `%w` to preserve the cause.
-- Use sentinel errors only when callers need `errors.Is`.
-- Prefer adding operation context to wrapped errors.
-- Do not panic for runtime/business errors.
-- Panics are acceptable for invalid startup wiring or impossible programmer errors in constructors.
+## Core Workflow
 
-# Interfaces
-- Keep interfaces small and behavior-focused.
-- Define interfaces close to the consuming code, not automatically near implementations.
-- Add compile-time interface assertions:
-  - `var _ MyInterface = (*MyType)(nil)`
+1. **Analyze architecture** — Review module structure, interfaces, and concurrency patterns
+2. **Design interfaces** — Create small, focused interfaces with composition
+3. **Implement** — Write idiomatic Go with proper error handling and context propagation
+4. **Lint & validate** — Run the project lint and validate and fix all reported issues before proceeding
+5. **Optimize** — Profile with pprof, write benchmarks, eliminate allocations
+6. **Test** — Table-driven tests with `-race` flag, fuzzing, 80%+ coverage; confirm race detector passes before committing
 
-# Constructors
-- Use `NewX(...)` constructors for types that require dependencies or non-zero initialization.
-- Validate required dependencies in constructors.
-- Return concrete types from constructors unless callers truly need an interface.
+## Reference Guide
 
-# Receivers and types
-- Use pointer receivers for:
-  - mutable state
-  - types containing mutexes/atomics
-  - large structs
-- Use value receivers only for small, copy-safe structs with immutable-like behavior.
-- Prefer concrete structs plus methods over premature interfaces.
+Load detailed guidance based on context:
 
-# Context and timeouts
-- Propagate context through all layers.
-- Use `context.WithTimeout` for bounded external operations and cleanup paths.
-- Cancel derived contexts with `defer cancel()`.
-- Respect `ctx.Done()` in retry loops and long-running operations.
+| Topic | Reference | Load When |
+|-------|-----------|-----------|
+| Concurrency | `references/concurrency.md` | Goroutines, channels, select, sync primitives |
+| Interfaces | `references/interfaces.md` | Interface design, io.Reader/Writer, composition |
+| Generics | `references/generics.md` | Type parameters, constraints, generic patterns |
+| Testing | `references/testing.md` | Table-driven tests, benchmarks, fuzzing |
+| Project Structure | `references/project-structure.md` | Module layout, internal packages, go.mod |
+| Observability | `references/observability.md` | Structured logging, tracing, metrics, correlation IDs |
 
-# Concurrency
-- Protect shared mutable state with the right sync primitive:
-  - `sync.Mutex` / `sync.RWMutex` for guarded state
-  - `sync.Once` for idempotent close/init
-  - `atomic` for simple flags/counters
-  - `sync.Map` only when its tradeoffs fit
-- Keep critical sections small.
-- Document non-obvious synchronization requirements.
+## Core Pattern Example
 
-# Resource lifecycle
-- Close resources deterministically.
-- Place `defer` immediately after successful acquisition when practical.
-- Make shutdown/close idempotent when the type owns long-lived resources.
+Goroutine with proper context cancellation and error propagation:
 
-# Logging and observability
-- Pass context into logs when logger supports it.
-- Keep observability setup at application edges.
-- Prefer wrappers/decorators/middleware for tracing and metrics over polluting business logic.
+```go
+// worker runs until ctx is cancelled or an error occurs.
+// Errors are returned via the errCh channel; the caller must drain it.
+func worker(ctx context.Context, jobs <-chan Job, errCh chan<- error) {
+    for {
+        select {
+        case <-ctx.Done():
+            errCh <- fmt.Errorf("worker cancelled: %w", ctx.Err())
+            return
+        case job, ok := <-jobs:
+            if !ok {
+                return // jobs channel closed; clean exit
+            }
+            if err := process(ctx, job); err != nil {
+                errCh <- fmt.Errorf("process job %v: %w", job.ID, err)
+                return
+            }
+        }
+    }
+}
 
-# API design
-- Keep exported APIs minimal.
-- Prefer explicit input/output structs when function arguments are growing or likely to evolve.
-- Keep transport/request DTOs separate from domain/internal models.
+func runPipeline(ctx context.Context, jobs []Job) error {
+    ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+    defer cancel()
 
-# Testing
-- Unit test behavior, not implementation details.
-- Mock only true boundaries.
-- Use interface assertions in tests or production code for contract safety.
-- Cover success, dependency failure, and sentinel-error paths.
+    jobCh := make(chan Job, len(jobs))
+    errCh := make(chan error, 1)
 
-# General Go style
-- Keep packages cohesive.
-- Keep files centered around one concept.
-- Prefer straightforward control flow.
-- Avoid hidden magic and unnecessary abstraction.
-- Use the standard library first unless a dependency clearly improves the code.
-- Prefer early returns and guard clauses to reduce nesting.
-- Avoid unnecessary `else` after returns.
-- Use naked returns only in very small functions.
+    go worker(ctx, jobCh, errCh)
+
+    for _, j := range jobs {
+        jobCh <- j
+    }
+    close(jobCh)
+
+    select {
+    case err := <-errCh:
+        return err
+    case <-ctx.Done():
+        return fmt.Errorf("pipeline timed out: %w", ctx.Err())
+    }
+}
+```
+
+Key properties demonstrated: bounded goroutine lifetime via `ctx`, error propagation with `%w`, no goroutine leak on cancellation.
+
+## Constraints
+
+### MUST DO
+- Add context.Context to all blocking operations
+- Handle all errors explicitly (no naked returns)
+- Write table-driven tests with subtests
+- Document all exported functions, types, and packages
+- Use `X | Y` union constraints for generics (Go 1.18+)
+- Propagate errors with fmt.Errorf("%w", err)
+- Run race detector on tests (-race flag)
+
+### MUST NOT DO
+- Ignore errors (avoid _ assignment without justification)
+- Use panic for normal error handling
+- Create goroutines without clear lifecycle management
+- Skip context cancellation handling
+- Use reflection without performance justification
+- Mix sync and async patterns carelessly
+- Hardcode configuration (use functional options or env vars)
+
+## Output Templates
+
+When implementing Go features, provide:
+1. Interface definitions (contracts first)
+2. Implementation files with proper package structure
+3. Test file with table-driven tests
+4. Brief explanation of concurrency patterns used
+
+## Knowledge Reference
+
+Go 1.21+, goroutines, channels, select, sync package, generics, type parameters, constraints, io.Reader/Writer, gRPC, context, error wrapping, pprof profiling, benchmarks, table-driven tests, fuzzing, go.mod, internal packages, functional options
