@@ -103,7 +103,7 @@ After drafting the initial `SPEC_PROMPT_DRAFT`, run an internal clarification re
 - review the draft for ambiguity, missing constraints, missing business rules, unclear success criteria, or conflicting requirements
 - if issues are found, return `STATUS: BLOCKED`, ask the user targeted clarification questions, and stop (do not guess)
 - if no issues are found, proceed to final response
-- after user clarification, re-enter at Step 5 before any additional review round
+- after user clarification, re-enter at Step 4 before any additional review round
 - repeat at most 5 rounds total, then stop to avoid loops
 
 Loop rules:
@@ -140,7 +140,8 @@ TECHNICAL_SPEC:
   - ...
 
 EXTERNAL_DEPENDENCIES:
-- name: ...
+- [] # Use an empty list when the feature has no external dependencies.
+- name: ... # Required item shape when one or more external dependencies exist.
   type: REST API | gRPC | webhook | message broker | CLI | SDK | database | browser automation | other
   purpose: ...
   evidence:
@@ -229,7 +230,8 @@ TECHNICAL_SPEC:
   - ...
 
 EXTERNAL_DEPENDENCIES:
-- name: ...
+- [] # Use an empty list when the feature has no external dependencies.
+- name: ... # Required item shape when one or more external dependencies exist.
   type: REST API | gRPC | webhook | message broker | CLI | SDK | database | browser automation | other
   purpose: ...
   evidence:
@@ -274,6 +276,7 @@ NEXT_STEP:
 - Always include at least one `CURRENT_BEHAVIOR` entry when repository evidence exists.
 - Include `SPEC_PROMPT_DRAFT` only when `STATUS: DRAFT READY`; omit it when `STATUS: BLOCKED`.
 - If the feature uses any external dependency, `EXTERNAL_DEPENDENCIES` is mandatory.
+- If the feature has no external dependencies, set `EXTERNAL_DEPENDENCIES: []`.
 - A spec is not actionable unless each external dependency has an explicit input and output contract or is listed under `OPEN_QUESTIONS` with `STATUS: BLOCKED`.
 - Keep `SPEC_PROMPT_DRAFT` concrete, implementation-ready, and free of assumptions.
 - When available, require at least one concrete example request and one concrete example response for each external dependency.
