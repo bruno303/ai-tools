@@ -99,8 +99,8 @@ When any requirement is ambiguous:
 
 ### 6) Self-Review Iteration Loop (Max 5 Rounds)
 Entry condition: run this loop only after Step 5 confirms ambiguity is sufficiently resolved to draft safely.
-After drafting the initial `SPEC_PROMPT_DRAFT`, run an internal clarification review loop:
-- review the draft for ambiguity, missing constraints, missing business rules, unclear success criteria, or conflicting requirements
+After drafting the initial structured spec response, run an internal clarification review loop:
+- review the response for ambiguity, missing constraints, missing business rules, unclear success criteria, or conflicting requirements
 - if issues are found, return `STATUS: BLOCKED`, ask the user targeted clarification questions, and stop (do not guess)
 - if no issues are found, proceed to final response
 - after user clarification, re-enter at Step 4 before any additional review round
@@ -168,30 +168,6 @@ EXTERNAL_DEPENDENCIES:
   unresolved_items:
     - ...
 
-SPEC_PROMPT_DRAFT:
-~~~md
-# Implementation Task
-...
-
-## Objective
-...
-
-## Business Rules (Must Hold)
-- ...
-
-## Technical Requirements
-- ...
-
-## Constraints
-- ...
-
-## Done When
-- ...
-
-## Open Questions
-- ...
-~~~
-
 OPEN_QUESTIONS:
 - ...
 
@@ -200,7 +176,7 @@ REVIEW_ROUNDS:
 - unresolved_items: ...
 
 NEXT_STEP:
-- action: share this draft directly with the user
+- action: use this structured spec as the implementation prompt
 - rationale: ...
 ```
 
@@ -274,11 +250,10 @@ NEXT_STEP:
 - Use `STATUS: DRAFT READY` only when the draft is actionable and no unresolved decision-blocking ambiguity remains.
 - Use `STATUS: BLOCKED` when missing context prevents a safe draft.
 - Always include at least one `CURRENT_BEHAVIOR` entry when repository evidence exists.
-- Include `SPEC_PROMPT_DRAFT` only when `STATUS: DRAFT READY`; omit it when `STATUS: BLOCKED`.
 - If the feature uses any external dependency, `EXTERNAL_DEPENDENCIES` is mandatory.
 - If the feature has no external dependencies, set `EXTERNAL_DEPENDENCIES: []`.
 - A spec is not actionable unless each external dependency has an explicit input and output contract or is listed under `OPEN_QUESTIONS` with `STATUS: BLOCKED`.
-- Keep `SPEC_PROMPT_DRAFT` concrete, implementation-ready, and free of assumptions.
+- Keep the structured spec concrete, implementation-ready, and free of assumptions.
 - When available, require at least one concrete example request and one concrete example response for each external dependency.
 - Ask the user for clarification immediately when any unresolved ambiguity is detected in the review loop.
 - Do not run the review loop more than 5 rounds.
