@@ -1,6 +1,6 @@
 ---
 description: Independent spec-first agent that turns feature requests into validated specification prompts.
-mode: primary
+mode: subagent
 permission:
   read: allow
   edit: deny

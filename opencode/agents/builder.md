@@ -1,6 +1,7 @@
 ---
 description: Specialist in writing clean, idiomatic code. Implements features based on the approved plan.
 mode: subagent
+model: openai/gpt-5.4-mini
 permission:
   read: allow
   edit: allow

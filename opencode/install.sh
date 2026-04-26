@@ -3,25 +3,29 @@ set -euo pipefail
 
 usage() {
   cat <<EOF
-Usage: $0 [--clean] <target-dir>
+Usage: $0 [--clean] [--remove-model] <target-dir>
 Or set the TARGET_DIR environment variable.
 
 This script installs all files from \`agents/\` into <target-dir>/agents/
-and installs each subfolder of \`skills/\` into <target-dir>/skills/<skill-name>/.
 Existing files are replaced.
 
 Options:
-  --clean, -c  Remove destination \`agents/\` and \`skills/\` before copying.
+  --clean, -c         Remove destination \`agents/\` before copying.
+  --remove-model      Remove any \`model: ...\` line from installed agent frontmatter.
 EOF
 }
 
 clean_install=false
+remove_model=false
 target_arg=""
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --clean|-c)
       clean_install=true
+      ;;
+    --remove-model)
+      remove_model=true
       ;;
     --help|-h)
       usage
@@ -55,30 +59,23 @@ TARGET_DIR=$(realpath "$TARGET_DIR")
 echo "Target directory: $TARGET_DIR"
 
 if [ "$clean_install" = true ]; then
-  echo "Cleaning destination agents/ and skills/ directories"
-  rm -rf -- "$TARGET_DIR/agents" "$TARGET_DIR/skills"
+  echo "Cleaning destination agents/ directory"
+  rm -rf -- "$TARGET_DIR/agents"
 fi
 
 mkdir -p "$TARGET_DIR/agents"
 shopt -s nullglob
 for f in agents/*.md; do
   if [ -f "$f" ]; then
-    cp -f -- "$f" "$TARGET_DIR/agents/"
+    dest="$TARGET_DIR/agents/$(basename -- "$f")"
+    if [ "$remove_model" = true ]; then
+      awk '!/^[[:space:]]*model:[[:space:]].*$/' "$f" > "$dest"
+    else
+      cp -f -- "$f" "$dest"
+    fi
     echo "Copied $f -> $TARGET_DIR/agents/"
   fi
 done
 shopt -u nullglob
-
-
-mkdir -p "$TARGET_DIR/skills"
-for d in skills/*; do
-  if [ -d "$d" ]; then
-    name=$(basename -- "$d")
-    dest="$TARGET_DIR/skills/$name"
-    mkdir -p "$dest"
-    cp -r -- "$d/." "$dest/"
-    echo "Copied $d -> $dest/"
-  fi
-done
 
 echo "Done."
