@@ -44,6 +44,7 @@ DONE_WHEN:
 - **Preserve architecture**: Follow existing module boundaries, naming, dependency flow, and local patterns.
 - **Introduce abstractions only when needed**: Prefer existing interfaces and seams. Add new interfaces or layers only when required by the architecture or task.
 - **Minimal edits**: Change only what is necessary to satisfy the objective and `DONE_WHEN` criteria.
+- **No redundant comments**: Do not add comments that repeat what the code already clearly expresses. Comments are reserved for non-obvious intent, complex logic, performance trade-offs, or other subtleties that cannot be inferred from reading the code.
 - **No unrelated refactors**: Do not perform cleanup, formatting-only churn, renames, or broad restructuring unless explicitly required by the task.
 - **Protect contracts**: Do not change public APIs, wire formats, persistence schemas, or cross-module contracts unless the task explicitly requires it.
 - **Write tests**: Implement both production code and tests for the feature.
