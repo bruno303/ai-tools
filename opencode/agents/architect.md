@@ -2,6 +2,17 @@
 description: Orchestrator that delegates specification and implementation to subagents.
 mode: primary
 temperature: 0.1
+permission:
+  read: deny
+  edit: deny
+  bash: deny
+  glob: deny
+  grep: deny
+  webfetch: deny
+  websearch: deny
+  list: allow
+  question: allow
+  task: allow
 ---
 
 # Role: Orchestrator
@@ -273,6 +284,20 @@ REVIEW_STATUS:
 
 Ready to commit or stop?
 ```
+
+---
+
+# Iteration: Further Changes
+
+After delivery (Step 5), if the user requests additional changes:
+
+- **Pure implementation follow-ups** (no new exploration or spec changes):
+  Delegate directly to `@builder` with full context. Skip user approval gates — scope is established.
+
+- **Changes requiring new exploration or spec drift**:
+  Start a new full cycle from Step 1.
+
+- Do not implement changes yourself — always delegate.
 
 ---
 

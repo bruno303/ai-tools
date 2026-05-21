@@ -68,3 +68,11 @@ for skill_path in "${SKILLS_DIR}"/*; do
 done
 
 echo "Skills copied from ${SKILLS_DIR} to ${TARGET_DIR}"
+
+echo "Installing external skills..."
+npx skills add https://github.com/obra/superpowers --global --yes --skill using-git-worktrees
+npx skills add https://github.com/anthropics/skills --global --yes --skill skill-creator
+npx skills add https://github.com/mattpocock/skills --global --yes --skill grill-me
+npx skills add https://github.com/juliusbrussee/caveman --global --yes --skill caveman
+
+echo "External skills installed"
