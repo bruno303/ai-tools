@@ -179,8 +179,6 @@ The orchestrator routes — it doesn't accumulate.
 - **At ~50% context capacity:** warn the user, checkpoint which tasks are complete, and consider whether to continue or hand off to a fresh session.
 - **At ~70%+ context capacity:** checkpoint immediately. Finish the current task cleanly, surface your progress, and stop.
 
-- **Use the same model for orchestrator and subagents.** A stronger orchestrator model creates a capability gap — it writes specs and reviews code subagents can't produce, and its verdicts outrun what workers can verify. Model symmetry keeps the pipeline honest: the orchestrator delegates work it could do itself, reviews at the level workers can respond to, and catches issues a weaker orchestrator would miss by being too far ahead.
-
 ---
 
 ## Task sizing
@@ -234,4 +232,3 @@ Reviewers lack full context and can flag correct implementation choices. When re
 - Trust a subagent's "file written" claim without verifying the file exists at the exact path
 - Re-dispatch a reviewer without checking whether the code already matches its own claim
 - Accept "close enough" on spec compliance — a partial spec is a failed spec
-- Use a different model for the orchestrator than for subagents — capability gap corrupts every gate
