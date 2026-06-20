@@ -75,6 +75,16 @@ The implementer reports one of four statuses:
 
 Never ignore a BLOCKED status or retry without changing something.
 
+### Pre-flight artifact verification
+
+Subagent summaries are self-reports, not verified facts. Before dispatching the spec reviewer, verify the implementer's claimed artifacts exist at the **exact expected paths**:
+
+```bash
+ls -la path/to/claimed/file.go
+```
+
+If a file is missing or at the wrong path, spawn a fix subagent with the exact path correction. Do NOT proceed to spec review — a missing file wastes an entire review cycle.
+
 ## Step 2: Spec compliance review (mandatory gate 1)
 
 Generate a review package — a single file containing the commit list, stat summary, and full diff — so the reviewer reads one file rather than deriving the diff itself:
@@ -183,6 +193,8 @@ Right-sized tasks = 2–5 minutes of focused work, touching 1–3 files, describ
 
 **Subagent fails or produces broken output:** Spawn a new fix subagent with a specific description of what went wrong. Don't attempt the fix in orchestrator context.
 
+**Fix subagent claims done but file content is unchanged:** After a fix subagent returns, re-read the target file and verify expected changes are present before dispatching re-review. If the content is still the old version, re-dispatch with the exact content to write rather than instructions — a subagent that failed to apply changes once will likely fail again with the same prompt.
+
 **Review finds issues:** Fix via subagent, generate a new review package, re-run the same review gate. Never skip re-review after a fix — the fix itself might introduce a new issue.
 
 **Reviewer flags ⚠️ "cannot verify from diff":** Resolve each one yourself before marking the task complete. If you find a real gap, treat it as a failed spec review and send it back.
@@ -197,6 +209,14 @@ Right-sized tasks = 2–5 minutes of focused work, touching 1–3 files, describ
 - The global constraints you hand the reviewer are its attention lens. Copy binding requirements verbatim from the plan's Global Constraints section: exact values, exact formats, stated relationships between components. Process rules are already implied by the review gate — the constraints block is for what THIS plan demands.
 - Do not ask a reviewer to re-run tests the implementer already ran on the same code. The implementer's report carries the test evidence.
 
+### After the reviewer returns
+
+Reviewers lack full context and can flag correct implementation choices. When reviewer findings appear wrong:
+- Re-read the code yourself and understand *why* the implementer made that choice
+- If the code compiles and tests pass, the reviewer may be wrong
+- If the reviewer is wrong, **reject the feedback** and proceed without re-review — a false-positive review doesn't need a re-review cycle
+- If the reviewer is right but missed context, fix the actual issue, not the reviewer's misinterpretation
+
 ---
 
 ## What not to do
@@ -208,3 +228,7 @@ Right-sized tasks = 2–5 minutes of focused work, touching 1–3 files, describ
 - Accumulate full diffs, file contents, or reviewer analyses in orchestrator context
 - Declare the plan done without running the final integration check
 - Re-dispatch a task the progress ledger already marks complete — check the ledger after any compaction or resume
+- Skip pre-flight verification of implementer artifacts before dispatching spec review
+- Trust a subagent's "file written" claim without verifying the file exists at the exact path
+- Re-dispatch a reviewer without checking whether the code already matches its own claim
+- Accept "close enough" on spec compliance — a partial spec is a failed spec
