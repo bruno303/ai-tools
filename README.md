@@ -8,6 +8,7 @@ Reusable agent and skill definitions for agentic software development workflows.
 - `codex/agents/` contains Codex equivalents of the same agents in TOML.
 - `skills/` contains reusable skills shared across agents.
 - `opencode/install.sh` installs OpenCode `agents/` and `skills/` into another repository.
+- `install-skils.sh` installs the skills from this repo plus external skills globally via `npx skills`.
 
 ## Agents
 
@@ -41,7 +42,24 @@ The same four agents are defined for both runtimes:
 - **`skills/db-change-checklist/SKILL.md`** - checklist for schema, query, migration, and rollout risk.
 - **`skills/observability-instrumentation-check/SKILL.md`** - ensure logs/metrics/traces/alerts are actionable and low-noise.
 - **`skills/project-coding-guidelines/SKILL.md`** - enforce repository-first architecture and placement conventions before implementation.
-- **`skills/go-coding/SKILL.md`** - Go coding conventions for readability, maintainability, and correctness.
+- **`skills/go-expert/SKILL.md`** - idiomatic, production-grade Go coding conventions.
+- **`skills/nextjs-coding/SKILL.md`** - Next.js frontend conventions for readability, maintainability, and correctness.
+- **`skills/subagent-plan-execution/SKILL.md`** - execute an existing implementation plan by dispatching fresh subagents per task.
+- **`skills/init-agents-md/SKILL.md`** - create or update the root `AGENTS.md` with workflows, commands, architecture, and agent working rules.
+
+## Installation
+
+Install the skills from this repo globally (no clone required):
+
+```bash
+npx skills add https://github.com/bruno303/ai-tools --global --yes
+```
+
+Or run `install-skils.sh`, which also installs external skills (`using-git-worktrees`, `skill-creator`, `grill-me`, `caveman`):
+
+```bash
+./install-skils.sh
+```
 
 ## Operating Model
 
