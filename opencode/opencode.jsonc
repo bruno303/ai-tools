@@ -1,10 +1,104 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "compaction": {
+    "auto": true,
+    "prune": true,
+    "reserved": 8192
+  },
+  "provider": {
+    "verboo": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Verboo AI Provider",
+      "options": {
+        "baseURL": "https://code.verboo.ai/router/v1",
+        "apiKey": "{env:VERBOO_API_KEY}"
+      },
+      "models": {
+        "deepseek-v4-flash": {
+          "name": "DeepSeek V4 Flash",
+          "limit": {
+            "context": 1048576,
+            "output": 65536
+          },
+          "variants": {
+            "high": {
+              "reasoningEffort": "high"
+            },
+            "max": {
+              "reasoningEffort": "max"
+            }
+          }
+        },
+        "glm-4.7-flash": {
+          "name": "GLM 4.7 Flash",
+          "limit": {
+            "context": 200704,
+            "output": 65536
+          },
+          "variants": {
+            "high": {
+              "reasoningEffort": "high"
+            }
+          }
+        },
+        "mimo-v2.5": {
+          "name": "MiMo V2.5",
+          "limit": {
+            "context": 1048576,
+            "output": 65536
+          }
+        },
+        "qwen3.6-27b": {
+          "name": "Qwen3.6 27B",
+          "limit": {
+            "context": 262144,
+            "output": 65536
+          },
+          "variants": {
+            "high": {
+              "reasoningEffort": "high"
+            }
+          }
+        }
+      }
+    }
+  },
   "mcp": {
     "serena": {
       "type": "local",
-      "command": ["uvx", "--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"],
+      "command": [
+        "uvx",
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server"
+      ],
+      "enabled": false
+    },
+    "grafana": {
+      "type": "local",
+      "command": [
+        "uvx",
+        "mcp-grafana"
+      ],
+      "environment": {
+        "GRAFANA_URL": "https://grafana.internal.bsoapp.net",
+        "GRAFANA_SERVICE_ACCOUNT_TOKEN": "{env:GRAFANA_SERVICE_ACCOUNT_TOKEN}"
+      },
       "enabled": true
     }
+  },
+  "watcher": {
+    "ignore": [
+      "node_modules/**",
+      "dist/**",
+      "build/**",
+      "coverage/**",
+      ".git/**",
+      ".next/**",
+      "vendor/**",
+      "tmp/**",
+      "*.log"
+    ]
   }
 }
