@@ -13,7 +13,7 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
 fi
 
 echo "Installing ai-tools skills..."
-npx skills add https://github.com/bruno303/ai-tools --global --yes
+npx skills add https://github.com/bruno303/ai-tools
 
 echo "Installing external skills..."
 npx skills add https://github.com/obra/superpowers --global --yes --skill using-git-worktrees
