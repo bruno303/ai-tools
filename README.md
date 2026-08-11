@@ -4,7 +4,7 @@ Reusable agent and skill definitions for agentic software development workflows.
 
 ## Repository Overview
 
-- `opencode/agents/` contains OpenCode agent prompts (`architect`, `builder`, `spec-driver`, `reviewer`) in Markdown.
+- `opencode/agents/` contains OpenCode agent prompts (`architect`, `builder`, `spec-driver`, `reviewer`, `documenter`) in Markdown.
 - `codex/agents/` contains Codex equivalents of the same agents in TOML.
 - `skills/` contains reusable skills shared across agents.
 - `opencode/install.sh` installs OpenCode `agents/` and `skills/` into another repository.
@@ -12,7 +12,7 @@ Reusable agent and skill definitions for agentic software development workflows.
 
 ## Agents
 
-The same four agents are defined for both runtimes:
+The same five agents are defined for both runtimes:
 
 - **`architect`** (`opencode/agents/architect.md`, `codex/agents/architect.toml`)
   - Orchestrates delivery as: discover -> plan -> build -> optional review -> human approval.
@@ -29,6 +29,10 @@ The same four agents are defined for both runtimes:
 - **`spec-driver`** (`opencode/agents/spec-driver.md`, `codex/agents/spec-driver.toml`)
   - Spec-first agent that turns feature requests into implementation-ready specification drafts.
   - Requires clarification for ambiguity and can return `DRAFT READY` or `BLOCKED`.
+
+- **`documenter`** (`opencode/agents/documenter.md`, `codex/agents/documenter.toml`)
+  - Specialist in writing and maintaining accurate software documentation from the codebase.
+  - Documents only what the code actually does and can return `STATUS: OK` or `BLOCKED`.
 
 ## Skills
 
@@ -67,4 +71,5 @@ Or run `install-skils.sh`, which also installs external skills (`using-git-workt
 - `builder` owns production code changes and tests.
 - `reviewer` performs scoped, read-only quality review.
 - `spec-driver` is the spec-first path when requirements need to be formalized before coding.
+- `documenter` owns documentation and keeps it accurate against the codebase.
 - Skills are loaded as needed based on task type (analysis, planning, API/DB changes, verification, review, debugging, language conventions).
