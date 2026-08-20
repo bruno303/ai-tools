@@ -36,7 +36,7 @@ The same four agents are defined for both runtimes:
 - **`skills/plan-implementation/SKILL.md`** - create a concrete implementation plan, including risks and test strategy.
 - **`skills/write-tests/SKILL.md`** - add or update behavior-focused tests at the right level.
 - **`skills/run-verification/SKILL.md`** - run the smallest relevant checks first, then expand as needed.
-- **`skills/review-changes/SKILL.md`** - review changed code for correctness, regressions, architecture fit, and missing tests.
+- **`skills/implementation-review/SKILL.md`** - review planned implementations for correctness, regressions, architecture fit, and missing tests.
 - **`skills/debug-failure/SKILL.md`** - isolate likely root cause for failing tests, builds, CI, or runtime behavior.
 - **`skills/api-change-checklist/SKILL.md`** - checklist for API or contract changes.
 - **`skills/db-change-checklist/SKILL.md`** - checklist for schema, query, migration, and rollout risk.

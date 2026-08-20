@@ -1,6 +1,6 @@
 ---
-name: review-changes
-description: Use after implementation to review changes for correctness, architecture fit, edge cases, regressions, and missing tests.
+name: implementation-review
+description: Use after implementing an approved plan or executing planned tasks to review correctness, architecture fit, regressions, edge cases, and missing tests.
 ---
 
 # When to use
