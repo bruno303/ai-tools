@@ -1,0 +1,19 @@
+{
+  "theme": {
+    "name": "carbonfox"
+  },
+  "diffs": {
+    "wrap": "word"
+  },
+  "session": {
+    "sidebar": "auto",
+    "scrollbar": true,
+    "thinking": "show"
+  },
+  "animations": true,
+  "attention": {
+    "enabled": true,
+    "notifications": true,
+    "sound": true
+  }
+}
