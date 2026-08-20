@@ -5,10 +5,7 @@ Reusable agent and skill definitions for agentic software development workflows.
 ## Repository Overview
 
 - `opencode/agents/` contains OpenCode agent prompts (`architect`, `builder`, `spec-driver`, `reviewer`) in Markdown.
-- `codex/agents/` contains Codex equivalents of the same agents in TOML.
 - `skills/` contains reusable skills shared across agents.
-- `opencode/install.sh` installs OpenCode `agents/` and `skills/` into another repository.
-- `install-skils.sh` installs the skills from this repo plus external skills globally via `npx skills`.
 
 ## Agents
 
@@ -36,7 +33,7 @@ The same four agents are defined for both runtimes:
 - **`skills/plan-implementation/SKILL.md`** - create a concrete implementation plan, including risks and test strategy.
 - **`skills/write-tests/SKILL.md`** - add or update behavior-focused tests at the right level.
 - **`skills/run-verification/SKILL.md`** - run the smallest relevant checks first, then expand as needed.
-- **`skills/review-changes/SKILL.md`** - review changed code for correctness, regressions, architecture fit, and missing tests.
+- **`skills/code-review/SKILL.md`** - review code for correctness, regressions, architecture fit, and missing tests.
 - **`skills/debug-failure/SKILL.md`** - isolate likely root cause for failing tests, builds, CI, or runtime behavior.
 - **`skills/api-change-checklist/SKILL.md`** - checklist for API or contract changes.
 - **`skills/db-change-checklist/SKILL.md`** - checklist for schema, query, migration, and rollout risk.
