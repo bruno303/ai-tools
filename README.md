@@ -49,7 +49,7 @@ The same four agents are defined for both runtimes:
 Install the skills from this repo globally (no clone required):
 
 ```bash
-npx skills add https://github.com/bruno303/ai-tools --global --yes
+npx skills add https://github.com/bruno303/ai-tools --skill "*"
 ```
 
 Or run `install-skils.sh`, which also installs external skills (`using-git-worktrees`, `skill-creator`, `grill-me`, `caveman`):
