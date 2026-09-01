@@ -16,13 +16,18 @@ Do not use for:
 # Goal
 Verify changes efficiently without wasting time or tokens on unnecessary full-suite runs.
 
+# Core principle
+Evidence before claims. Do not claim that work is complete, fixed, passing, or regression-free without fresh verification evidence from the current change.
+
 # Process
-1. Start with the smallest relevant verification scope.
-2. Run targeted tests closest to the changed behavior.
-3. Run format, lint, typecheck, or build steps only if relevant.
-4. Expand to broader verification if targeted checks fail to provide confidence.
-5. Check Sonar analysis when it is available, following the conditional process below.
-6. Record what was run and what was not.
+1. Identify the exact proof command for the claim being evaluated.
+2. Start with the smallest relevant verification scope.
+3. Run targeted tests closest to the changed behavior.
+4. Run format, lint, typecheck, or build steps only if relevant.
+5. Expand to broader verification if targeted checks fail to provide confidence.
+6. Read the complete output and confirm the command's exit status.
+7. Check Sonar analysis when it is available, following the conditional process below.
+8. Record what was run and what was not.
 
 # Conditional Sonar Verification
 After local checks, determine whether Sonar verification is available:
@@ -39,7 +44,9 @@ Sonar is asynchronous. Never describe a change as Sonar-clean unless a completed
 
 # Rules
 - Prefer narrow verification first.
-- Do not claim a check passed unless it was actually run.
+- Run the proof command fresh for the current change; prior output, assumptions, or agent reports are not evidence.
+- Do not claim a check passed unless it was actually run and its output and exit status support that claim.
+- Ensure completion, fix, and regression claims match the scope of the evidence; passing a targeted check does not prove the full suite passes.
 - Report skipped checks explicitly.
 - When a command fails, summarize the failure and likely cause.
 - Report Sonar status as `clean`, `findings`, `pending`, or `unavailable`.
