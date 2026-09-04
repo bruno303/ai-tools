@@ -129,7 +129,13 @@ If the reviewer flags something that's actually correct (compiles, tests pass, f
 
 ### 1d. Task Fix Pass
 
-Only run this step after `STATUS: CHANGES_REQUESTED`. Give the fixer the reviewer handback and the existing brief/report paths. It may modify the expected outputs to address the complete issue list, but it must not expand scope. Treat the fixer's `DONE` or `BLOCKED` response as the implementation result; there is no second review cycle.
+Only run this step after `STATUS: CHANGES_REQUESTED`. Give the fixer the
+reviewer handback and the existing brief/report paths. It may modify the
+expected outputs to address the complete issue list, but it must not expand
+scope. If the fixer returns `DONE`, proceed to the quality gate. If it returns
+`BLOCKED`, stop the task and report the unresolved blocker; do not run the gate
+or continue to another task unless the orchestrator or user explicitly chooses
+to proceed. There is no second review cycle.
 
 ## Step 2: Quality Gate
 
@@ -176,8 +182,13 @@ or report.
 If the final reviewer returns `STATUS: PASSED`, the plan is complete. If it
 returns `STATUS: CHANGES_REQUESTED`, dispatch one final consolidated fix pass
 with all critical, high, and medium findings (and practical low findings).
-Run the applicable quality gates again after that fix pass, but do not dispatch
-another reviewer or automatic fix loop. Report any unresolved failures.
+Read `references/final_fixer_prompt.md` and provide the plan path, all report
+paths, aggregate diff path, complete reviewer handback, resolved verification
+commands, and expected output paths. If the final fixer returns `STATUS: OK`,
+run the applicable quality gates again. If it returns `STATUS: BLOCKED`, stop
+and report the unresolved blocker; do not run the gate or continue unless the
+orchestrator or user explicitly chooses to proceed. Do not dispatch another
+reviewer or automatic fix loop. Report any unresolved verification failures.
 
 ## Context Discipline
 
