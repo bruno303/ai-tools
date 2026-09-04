@@ -5,7 +5,7 @@ description: Execute an existing implementation plan by dispatching fresh subage
 
 # Subagent Plan Execution
 
-Execute a multi-task implementation plan by dispatching each task to a fresh subagent with zero context pollution, then reviewing the result before proceeding. This keeps the orchestrator lean and catches issues early.
+Execute a multi-task implementation plan by dispatching each task to a fresh subagent with zero context pollution. Each task gets a lightweight implementation gate; after all tasks, one fresh reviewer applies the full `code-review` skill to the aggregate change, followed by one consolidated fix pass and a non-looping quality gate.
 
 ## Locating Reference Files
 
@@ -75,9 +75,9 @@ Dispatch a fresh subagent with the filled-in template. Give it the project root 
 | Response | Action |
 |---|---|
 | **DONE** | Proceed to 1c. |
-| **BLOCKED: \<reason\>** | Fix the blocker (add context, clarify spec, split task) and re-dispatch from 1b. Never re-dispatch without changing something. |
+| **BLOCKED: \<reason\>** | Fix the blocker (add context, clarify spec, split task) and re-dispatch from 1b once. If the retry is blocked, stop the task and report the unresolved blocker; do not retry indefinitely. |
 
-### 1c. Review the Implementation
+### 1c. Lightweight Implementation Review
 
 First, verify the implementer's claimed outputs exist:
 
@@ -85,18 +85,29 @@ First, verify the implementer's claimed outputs exist:
 ls -la <each file in expected_outputs>
 ```
 
-If any file is missing, re-dispatch with the exact path correction. Do not proceed to review.
+If any file is missing, re-dispatch once with the exact path correction. If an
+expected output is still missing after that retry, stop the task and report the
+unresolved output; do not retry indefinitely.
 
-Generate a diff package so the reviewer reads one file:
+Generate a diff package so the reviewer reads one file. Use the working-tree
+diff when the implementer did not commit. If it did commit, use the latest
+commit instead of assuming a parent commit exists:
 
 ```
-git diff --stat HEAD~1 > .agents/plans/review-task-N.diff
-git diff -U10 HEAD~1 >> .agents/plans/review-task-N.diff
+if git diff --quiet HEAD; then
+  git show --stat --format=oneline HEAD > .agents/plans/review-task-N.diff
+  git show --format= --no-ext-diff HEAD >> .agents/plans/review-task-N.diff
+else
+  git diff --stat HEAD > .agents/plans/review-task-N.diff
+  git diff -U10 HEAD >> .agents/plans/review-task-N.diff
+fi
 ```
 
 (Without git, collect changed file paths and their contents into `.agents/plans/review-task-N.diff`.)
 
-Read `references/reviewer_prompt.md` (in the skill directory). Fill in:
+Read `references/reviewer_prompt.md` (in the skill directory). This is a
+lightweight task gate, not the full code review. It checks the task contract,
+obvious correctness issues, and focused test/verification coverage. Fill in:
 
 | Placeholder | Value |
 |---|---|
@@ -104,30 +115,73 @@ Read `references/reviewer_prompt.md` (in the skill directory). Fill in:
 | `{report_path}` | `.agents/plans/task-N-report.md` |
 | `{diff_path}` | `.agents/plans/review-task-N.diff` |
 
-Dispatch a fresh reviewer subagent. It checks spec compliance and code quality in one pass.
+Dispatch one fresh reviewer subagent. Do not perform broad architectural or
+end-to-end review here; that happens once after all tasks are complete.
 
 #### Result Handling
 
 | Response | Action |
 |---|---|
-| **APPROVE** | Task complete. Move to next task or Step 2. |
-| **REPROVE** | Reviewer listed issues. Fix all `MUST_FIX` items (and `SHOULD_FIX` if practical) by re-dispatching from 1b with the issue list. Generate a new diff and re-run 1c. |
+| **`STATUS: PASSED`** | No blocking findings. Move to the quality gate for this task, then continue to the next task. |
+| **`STATUS: CHANGES_REQUESTED`** | Reviewer listed a task-level defect. Dispatch one fresh implementer for a single consolidated fix pass containing the findings. The fix pass must write an updated report and run the implementer's verification command. Do not re-review the task; proceed to the quality gate and report any unresolved failures. |
 
 If the reviewer flags something that's actually correct (compiles, tests pass, follows conventions), reject that specific feedback and proceed. Reviewers can be wrong — they lack full context.
 
+### 1d. Task Fix Pass
+
+Only run this step after `STATUS: CHANGES_REQUESTED`. Give the fixer the reviewer handback and the existing brief/report paths. It may modify the expected outputs to address the complete issue list, but it must not expand scope. Treat the fixer's `DONE` or `BLOCKED` response as the implementation result; there is no second review cycle.
+
 ## Step 2: Quality Gate
 
-After all tasks pass review, run these checks from the project root:
+Before the gate, resolve each command from the plan or task brief. If neither
+specifies it, discover an established command from repository guidance and
+configuration (for example, package scripts or build files). The orchestrator
+must pass the resolved commands to the gate; do not invent commands. Record the
+resolved command in the task handback.
 
-1. **Build/compile** — `{build_command}` must succeed
-2. **Tests** — `{test_command}` must pass
-3. **Lint** — `{lint_command}` must be clean
+After each task's lightweight review (and its optional task fix pass), run the
+applicable checks from the project root. Then, after all tasks pass their gates,
+run the final aggregate review described below.
 
-If any gate fails, fix and re-run. Once all three pass, the plan is complete.
+1. **Build/compile** — the resolved build command must succeed
+2. **Tests** — the resolved test command must pass
+3. **Lint** — the resolved lint command must be clean
+
+If the plan or repository establishes that a gate is not applicable, record it
+as `not applicable` with the reason. If an applicable command cannot be supplied
+or discovered, record that gate as `unavailable` with the missing-command reason;
+do not treat it as passed. If any gate fails, or is unavailable, record the
+unresolved verification result in the task handback and continue only if the
+orchestrator or user explicitly chooses to proceed. Do not automatically
+dispatch another fix or review loop. Once all applicable gates pass, continue
+to the next task. Do not treat the lightweight task review as the final quality
+review.
+
+## Step 3: Final Aggregate Code Review
+
+After all tasks and their quality gates pass, generate an aggregate diff from
+the implementation baseline. Include every task's changed file and the final
+plan/feature requirements, not only the last task's diff. If the implementation
+was not committed, use `git diff` against the baseline; if it was committed,
+use the commits produced by the implementation cycle. Write the result to
+`.agents/plans/review-final.diff`. Use
+`references/final_reviewer_prompt.md` and dispatch one fresh reviewer. That
+reviewer must apply the full `code-review` skill and inspect the feature
+end-to-end.
+
+Pass the plan path, all implementation report paths, and the aggregate diff
+path into the final reviewer template. Do not pass only the last task's brief
+or report.
+
+If the final reviewer returns `STATUS: PASSED`, the plan is complete. If it
+returns `STATUS: CHANGES_REQUESTED`, dispatch one final consolidated fix pass
+with all critical, high, and medium findings (and practical low findings).
+Run the applicable quality gates again after that fix pass, but do not dispatch
+another reviewer or automatic fix loop. Report any unresolved failures.
 
 ## Context Discipline
 
 - **Pass artifacts as file paths, not pasted content.** Subagents read brief, diff, and report files directly. Never paste full specs or diffs into dispatch prompts.
-- **Read only verdicts from subagent outputs.** You want APPROVE/REPROVE/DONE/BLOCKED and the issue list, not the full analysis.
+- **Read only verdicts from subagent outputs.** You want the reviewer `STATUS`, the implementer `DONE`/`BLOCKED`, and the issue list, not the full analysis.
 - **Don't accumulate state.** After a task is approved, drop its details. Only carry forward interfaces the next task needs.
 - **At ~70%+ context:** checkpoint completed tasks, finish the current one, and warn the user.

@@ -42,7 +42,7 @@ The same four agents are defined for both runtimes:
 - **`skills/go-expert/SKILL.md`** - idiomatic, production-grade Go coding conventions.
 - **`skills/nextjs-coding/SKILL.md`** - Next.js frontend conventions for readability, maintainability, and correctness.
 - **`skills/simplify/SKILL.md`** - refine recently modified code for clarity and consistency without changing functionality.
-- **`skills/subagent-plan-execution/SKILL.md`** - execute an existing implementation plan by dispatching fresh subagents per task.
+- **`skills/subagent-plan-execution/SKILL.md`** - execute an existing implementation plan with lightweight task gates, one final aggregate code review, bounded fix passes, and non-looping quality gates.
 - **`skills/init-agents-md/SKILL.md`** - create or update the root `AGENTS.md` with workflows, commands, architecture, and agent working rules.
 
 ## Installation

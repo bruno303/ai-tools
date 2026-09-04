@@ -1,6 +1,8 @@
 # Reviewer Prompt
 
-You are reviewing the implementation of a single task. Your job is to verify two things: (1) the implementation satisfies every requirement in the spec, and (2) the code quality meets the project's standards.
+You are performing a lightweight implementation gate for a single task. Verify
+that the task satisfies its spec and has no obvious correctness or verification
+problems. The full `code-review` skill is reserved for the final aggregate review.
 
 ## Instructions
 
@@ -8,6 +10,7 @@ You are reviewing the implementation of a single task. Your job is to verify two
 2. **Read the implementer's report** at `{report_path}` to understand what was changed and why.
 3. **Read the diff** at `{diff_path}` to see the actual code changes.
 4. **Read any changed files** referenced by the diff to inspect the full context around changes.
+5. Do not modify files or perform a broad architectural/end-to-end review; the final reviewer handles that.
 
 ## What to Check
 
@@ -27,22 +30,42 @@ You are reviewing the implementation of a single task. Your job is to verify two
 
 ## Response Format
 
-Return exactly one of:
+Return exactly this handback structure:
 
-**APPROVE**
-The implementation fully satisfies the spec and meets quality standards. No changes needed.
+```md
+STATUS: PASSED | CHANGES_REQUESTED
 
-**REPROVE**
-List each issue found, grouped by severity:
-- `MUST_FIX:` — blocks approval. Spec violation or serious bug.
-- `SHOULD_FIX:` — quality issue that should be addressed.
+FINDINGS:
+- severity: high | medium | low
+  file: ...
+  line: ...
+  issue: ...
+  fix: ...
+```
+
+Use `STATUS: PASSED` only when there are no high or medium findings. Use
+`STATUS: CHANGES_REQUESTED` when any high or medium finding exists or the review
+input is too incomplete for a reliable review. Put every actionable issue under
+`FINDINGS`; write `- none` when there are no findings. Low findings do not by
+themselves require changes, but should still be included for the fixer.
 
 Example:
 ```
-REPROVE
-MUST_FIX: endpoint /users returns 200 instead of 201 on create (spec line 12)
-MUST_FIX: missing input validation for email field (spec line 7)
-SHOULD_FIX: error messages are generic, consider including field names
+STATUS: CHANGES_REQUESTED
+
+FINDINGS:
+- severity: high
+  file: src/users.ts
+  line: 42
+  issue: endpoint returns 200 instead of 201 on create
+  fix: return 201 for successful creation
+- severity: low
+  file: src/users.ts
+  line: 18
+  issue: error messages are generic
+  fix: consider including field names
 ```
 
-Do not flag stylistic preferences as MUST_FIX. Only flag items that would cause incorrect behavior, violate the spec, or violate established project conventions.
+Do not flag stylistic preferences as actionable findings. Only flag items that
+would cause incorrect behavior, violate the spec, or violate established project
+conventions.
