@@ -43,6 +43,7 @@ The same four agents are defined for both runtimes:
 - **`skills/nextjs-coding/SKILL.md`** - Next.js frontend conventions for readability, maintainability, and correctness.
 - **`skills/simplify/SKILL.md`** - refine recently modified code for clarity and consistency without changing functionality.
 - **`skills/subagent-plan-execution/SKILL.md`** - execute an existing implementation plan with lightweight task gates, one final aggregate code review, bounded fix passes, and non-looping quality gates.
+- **`skills/grill-me/SKILL.md`** - identify only implementation-relevant ambiguities, infer safe defaults from the repository, and batch unresolved decisions instead of asking confirmation-only questions.
 - **`skills/init-agents-md/SKILL.md`** - create or update the root `AGENTS.md` with workflows, commands, architecture, and agent working rules.
 
 ## Installation
@@ -53,7 +54,7 @@ Install the skills from this repo globally (no clone required):
 npx skills add https://github.com/bruno303/ai-tools --skill "*"
 ```
 
-Or run `install-skils.sh`, which also installs external skills (`using-git-worktrees`, `skill-creator`, `grill-me`, `caveman`):
+Or run `install-skils.sh`, which also installs external skills (`using-git-worktrees`, `skill-creator`, `caveman`):
 
 ```bash
 ./install-skils.sh
