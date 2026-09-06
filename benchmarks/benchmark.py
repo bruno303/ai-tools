@@ -49,7 +49,10 @@ def render_command(command: Command, task_path: Path, workspace: Path) -> list[s
 def run_command(command: list[str], cwd: Path, env: dict[str, str], timeout: int | None) -> dict[str, Any]:
     started = time.monotonic()
     try:
-        completed = subprocess.run(
+        # Benchmark configs are explicit, local, trusted inputs selected by the CLI user.
+        # Executing those commands is the purpose of this tool; no remote/untrusted input
+        # is accepted here. shell=False prevents shell interpretation of task/config text.
+        completed = subprocess.run(  # NOSONAR
             command,
             cwd=cwd,
             env=env,
