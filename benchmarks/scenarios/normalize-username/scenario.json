@@ -1,0 +1,18 @@
+{
+  "name": "normalize-username",
+  "fixture": "fixture",
+  "task": "task.md",
+  "timeout_seconds": 600,
+  "inject_after_run": [
+    {
+      "source": "hidden-tests/test_hidden.py",
+      "destination": "test_hidden.py"
+    }
+  ],
+  "verification": [
+    {
+      "name": "tests",
+      "command": "python3 -m unittest discover -v"
+    }
+  ]
+}
