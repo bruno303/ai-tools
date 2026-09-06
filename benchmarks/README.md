@@ -94,7 +94,7 @@ The comparison prints a Markdown table with run count, success rate, median wall
   "verification": [
     {
       "name": "tests",
-      "command": "python3 -m unittest discover -v"
+      "command": ["python3", "-m", "unittest", "discover", "-v"]
     }
   ]
 }
@@ -106,18 +106,23 @@ Verification should test behavior rather than prescribe a specific implementatio
 
 ## Variant format
 
+Prefer argument arrays. Commands are executed directly without a shell:
+
 ```json
 {
   "name": "opencode-gpt56-baseline",
-  "command": "opencode run --model openai/gpt-5.6 \"$(cat '{task_file}')\"",
+  "command": ["opencode", "run", "--model", "openai/gpt-5.6", "{task_content}"],
   "setup": [],
   "env": {}
 }
 ```
 
+Simple command strings are also accepted and are parsed with `shlex.split`, but shell syntax such as pipes, redirects, `&&`, or command substitution is intentionally unsupported.
+
 Available placeholders in `command` and `setup`:
 
 - `{task_file}` - absolute path to the task Markdown file
+- `{task_content}` - complete task Markdown content passed as one argument
 - `{workspace}` - isolated fixture workspace
 
 Commands execute with the workspace as their current directory.
@@ -129,7 +134,7 @@ A variant may set `usage_file` to a JSON file that its harness or wrapper create
 ```json
 {
   "name": "instrumented-run",
-  "command": "./run-agent-and-export-usage.sh '{task_file}'",
+  "command": ["./run-agent-and-export-usage.sh", "{task_file}"],
   "usage_file": ".benchmark-usage.json"
 }
 ```
