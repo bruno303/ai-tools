@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shlex
 import shutil
 import statistics
 import subprocess
@@ -16,6 +17,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent
 RESULTS_DIR = ROOT / "results"
+Command = str | list[str]
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -23,17 +25,38 @@ def load_json(path: Path) -> dict[str, Any]:
         return json.load(handle)
 
 
-def run_command(command: str, cwd: Path, env: dict[str, str], timeout: int | None) -> dict[str, Any]:
+def normalize_command(command: Command) -> list[str]:
+    if isinstance(command, str):
+        return shlex.split(command)
+    return [str(part) for part in command]
+
+
+def render_command(command: Command, task_path: Path, workspace: Path) -> list[str]:
+    task_content = task_path.read_text(encoding="utf-8")
+    replacements = {
+        "{task_file}": str(task_path),
+        "{workspace}": str(workspace),
+        "{task_content}": task_content,
+    }
+    rendered: list[str] = []
+    for part in normalize_command(command):
+        for placeholder, value in replacements.items():
+            part = part.replace(placeholder, value)
+        rendered.append(part)
+    return rendered
+
+
+def run_command(command: list[str], cwd: Path, env: dict[str, str], timeout: int | None) -> dict[str, Any]:
     started = time.monotonic()
     try:
         completed = subprocess.run(
             command,
             cwd=cwd,
             env=env,
-            shell=True,
             text=True,
             capture_output=True,
             timeout=timeout,
+            check=False,
         )
         return {
             "command": command,
@@ -52,10 +75,6 @@ def run_command(command: str, cwd: Path, env: dict[str, str], timeout: int | Non
             "stderr": exc.stderr or "",
             "timed_out": True,
         }
-
-
-def render_command(command: str, task_path: Path, workspace: Path) -> str:
-    return command.replace("{task_file}", str(task_path)).replace("{workspace}", str(workspace))
 
 
 def inject_after_run(scenario_dir: Path, workspace: Path, injections: list[dict[str, str]]) -> None:
@@ -127,7 +146,8 @@ def execute_scenario(scenario_path: Path, variant_path: Path, keep_workspace: bo
 
         all_passed = run_step["exit_code"] == 0 and not run_step["timed_out"]
         for evaluation in scenario.get("verification", []):
-            step = run_command(evaluation["command"], workspace, env, int(evaluation.get("timeout_seconds", timeout)))
+            command = render_command(evaluation["command"], task_path, workspace)
+            step = run_command(command, workspace, env, int(evaluation.get("timeout_seconds", timeout)))
             step["name"] = evaluation["name"]
             step["passed"] = step["exit_code"] == 0 and not step["timed_out"]
             result["evaluations"].append(step)
