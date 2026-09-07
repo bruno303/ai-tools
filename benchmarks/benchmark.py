@@ -17,6 +17,8 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent
 RESULTS_DIR = ROOT / "results"
+DURATION_SECONDS = "duration_seconds"
+INPUT_TOKENS = "input_tokens"
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -63,7 +65,7 @@ def run_command(command: list[str], cwd: Path, env: dict[str, str], timeout: int
         return {
             "command": command,
             "exit_code": completed.returncode,
-            "duration_seconds": round(time.monotonic() - started, 3),
+            DURATION_SECONDS: round(time.monotonic() - started, 3),
             "stdout": completed.stdout,
             "stderr": completed.stderr,
             "timed_out": False,
@@ -72,7 +74,7 @@ def run_command(command: list[str], cwd: Path, env: dict[str, str], timeout: int
         return {
             "command": command,
             "exit_code": None,
-            "duration_seconds": round(time.monotonic() - started, 3),
+            DURATION_SECONDS: round(time.monotonic() - started, 3),
             "stdout": exc.stdout or "",
             "stderr": exc.stderr or "",
             "timed_out": True,
@@ -160,7 +162,7 @@ def execute_scenario(scenario_path: Path, variant_path: Path, keep_workspace: bo
             result["failure_reason"] = "run_or_verification_failed"
         return result
     finally:
-        result["duration_seconds"] = round(time.monotonic() - started, 3)
+        result[DURATION_SECONDS] = round(time.monotonic() - started, 3)
         if keep_workspace:
             result["workspace"] = str(workspace)
         else:
@@ -178,7 +180,7 @@ def save_result(result: dict[str, Any]) -> Path:
 
 def result_summary(result: dict[str, Any]) -> str:
     status = "PASS" if result["success"] else "FAIL"
-    return f"{status} {result['scenario']} / {result['variant']} ({result['duration_seconds']}s)"
+    return f"{status} {result['scenario']} / {result['variant']} ({result[DURATION_SECONDS]}s)"
 
 
 def command_run(args: argparse.Namespace) -> int:
@@ -204,11 +206,11 @@ def command_compare(args: argparse.Namespace) -> int:
     print("|---|---:|---:|---:|---:|")
     for variant, items in sorted(groups.items()):
         successes = sum(1 for item in items if item.get("success"))
-        durations = [float(item["duration_seconds"]) for item in items]
+        durations = [float(item[DURATION_SECONDS]) for item in items]
         input_tokens = [
-            int(item["usage"]["input_tokens"])
+            int(item["usage"][INPUT_TOKENS])
             for item in items
-            if item.get("usage") and "input_tokens" in item["usage"]
+            if item.get("usage") and INPUT_TOKENS in item["usage"]
         ]
         median_tokens = str(int(statistics.median(input_tokens))) if input_tokens else "n/a"
         print(
