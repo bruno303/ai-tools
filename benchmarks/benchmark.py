@@ -47,6 +47,24 @@ def render_command(command: str | list[str], task_path: Path, workspace: Path) -
     return rendered
 
 
+def command_result(
+    command: list[str],
+    started: float,
+    exit_code: int | None,
+    stdout: str,
+    stderr: str,
+    timed_out: bool,
+) -> dict[str, Any]:
+    return {
+        "command": command,
+        "exit_code": exit_code,
+        DURATION_SECONDS: round(time.monotonic() - started, 3),
+        "stdout": stdout,
+        "stderr": stderr,
+        "timed_out": timed_out,
+    }
+
+
 def run_command(command: list[str], cwd: Path, env: dict[str, str], timeout: int | None) -> dict[str, Any]:
     started = time.monotonic()
     try:
@@ -62,23 +80,27 @@ def run_command(command: list[str], cwd: Path, env: dict[str, str], timeout: int
             timeout=timeout,
             check=False,
         )
-        return {
-            "command": command,
-            "exit_code": completed.returncode,
-            DURATION_SECONDS: round(time.monotonic() - started, 3),
-            "stdout": completed.stdout,
-            "stderr": completed.stderr,
-            "timed_out": False,
-        }
+        return command_result(
+            command,
+            started,
+            completed.returncode,
+            completed.stdout,
+            completed.stderr,
+            False,
+        )
     except subprocess.TimeoutExpired as exc:
-        return {
-            "command": command,
-            "exit_code": None,
-            DURATION_SECONDS: round(time.monotonic() - started, 3),
-            "stdout": exc.stdout or "",
-            "stderr": exc.stderr or "",
-            "timed_out": True,
-        }
+        return command_result(
+            command,
+            started,
+            None,
+            exc.stdout or "",
+            exc.stderr or "",
+            True,
+        )
+
+
+def step_passed(step: dict[str, Any]) -> bool:
+    return step["exit_code"] == 0 and not step["timed_out"]
 
 
 def inject_after_run(scenario_dir: Path, workspace: Path, injections: list[dict[str, str]]) -> None:
@@ -100,6 +122,41 @@ def collect_usage(variant: dict[str, Any], workspace: Path) -> dict[str, Any] | 
     if not path.exists():
         return None
     return load_json(path)
+
+
+def run_setup(
+    variant: dict[str, Any],
+    task_path: Path,
+    workspace: Path,
+    env: dict[str, str],
+    timeout: int,
+) -> tuple[list[dict[str, Any]], bool]:
+    steps: list[dict[str, Any]] = []
+    for command in variant.get("setup", []):
+        step = run_command(render_command(command, task_path, workspace), workspace, env, timeout)
+        steps.append(step)
+        if not step_passed(step):
+            return steps, False
+    return steps, True
+
+
+def run_verifications(
+    scenario: dict[str, Any],
+    task_path: Path,
+    workspace: Path,
+    env: dict[str, str],
+    timeout: int,
+) -> tuple[list[dict[str, Any]], bool]:
+    steps: list[dict[str, Any]] = []
+    all_passed = True
+    for evaluation in scenario.get("verification", []):
+        command = render_command(evaluation["command"], task_path, workspace)
+        step = run_command(command, workspace, env, int(evaluation.get("timeout_seconds", timeout)))
+        step["name"] = evaluation["name"]
+        step["passed"] = step_passed(step)
+        steps.append(step)
+        all_passed = all_passed and step["passed"]
+    return steps, all_passed
 
 
 def execute_scenario(scenario_path: Path, variant_path: Path, keep_workspace: bool = False) -> dict[str, Any]:
@@ -135,30 +192,22 @@ def execute_scenario(scenario_path: Path, variant_path: Path, keep_workspace: bo
 
     started = time.monotonic()
     try:
-        for command in variant.get("setup", []):
-            step = run_command(render_command(command, task_path, workspace), workspace, env, timeout)
-            result["setup"].append(step)
-            if step["exit_code"] != 0:
-                result["failure_reason"] = "setup_failed"
-                return result
+        setup_steps, setup_passed = run_setup(variant, task_path, workspace, env, timeout)
+        result["setup"] = setup_steps
+        if not setup_passed:
+            result["failure_reason"] = "setup_failed"
+            return result
 
         run_step = run_command(render_command(variant["command"], task_path, workspace), workspace, env, timeout)
         result["run"] = run_step
         result["usage"] = collect_usage(variant, workspace)
 
         inject_after_run(scenario_dir, workspace, scenario.get("inject_after_run", []))
+        evaluation_steps, evaluations_passed = run_verifications(scenario, task_path, workspace, env, timeout)
+        result["evaluations"] = evaluation_steps
 
-        all_passed = run_step["exit_code"] == 0 and not run_step["timed_out"]
-        for evaluation in scenario.get("verification", []):
-            command = render_command(evaluation["command"], task_path, workspace)
-            step = run_command(command, workspace, env, int(evaluation.get("timeout_seconds", timeout)))
-            step["name"] = evaluation["name"]
-            step["passed"] = step["exit_code"] == 0 and not step["timed_out"]
-            result["evaluations"].append(step)
-            all_passed = all_passed and step["passed"]
-
-        result["success"] = all_passed
-        if not all_passed:
+        result["success"] = step_passed(run_step) and evaluations_passed
+        if not result["success"]:
             result["failure_reason"] = "run_or_verification_failed"
         return result
     finally:
