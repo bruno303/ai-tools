@@ -12,8 +12,10 @@ class ExistingBehaviorTests(unittest.TestCase):
         self.assertEqual({"id": "u1", "active": True}, get_user(repo, "u1"))
 
     def test_missing_user_raises(self):
+        service = UserService(UserRepository())
+
         with self.assertRaises(UserNotFound):
-            UserService(UserRepository()).get_user("missing")
+            service.get_user("missing")
 
 
 if __name__ == "__main__":
