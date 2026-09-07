@@ -20,8 +20,10 @@ class HiddenDeactivateUserTests(unittest.TestCase):
         self.assertFalse(repo.get("u1").active)
 
     def test_missing_user_raises(self):
+        service = UserService(UserRepository())
+
         with self.assertRaises(UserNotFound):
-            UserService(UserRepository()).deactivate_user("missing")
+            service.deactivate_user("missing")
 
     def test_api_returns_deactivated_state(self):
         repo = UserRepository([User("u1")])
