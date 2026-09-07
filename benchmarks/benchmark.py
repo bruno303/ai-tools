@@ -17,7 +17,6 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent
 RESULTS_DIR = ROOT / "results"
-Command = str | list[str]
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -25,13 +24,13 @@ def load_json(path: Path) -> dict[str, Any]:
         return json.load(handle)
 
 
-def normalize_command(command: Command) -> list[str]:
+def normalize_command(command: str | list[str]) -> list[str]:
     if isinstance(command, str):
         return shlex.split(command)
     return [str(part) for part in command]
 
 
-def render_command(command: Command, task_path: Path, workspace: Path) -> list[str]:
+def render_command(command: str | list[str], task_path: Path, workspace: Path) -> list[str]:
     task_content = task_path.read_text(encoding="utf-8")
     replacements = {
         "{task_file}": str(task_path),
