@@ -13,7 +13,8 @@ OPENCODE_INSTALLER = ROOT / "opencode" / "install.sh"
 VALIDATOR = ROOT / "scripts" / "validate-agent-definitions.py"
 
 validator_spec = importlib.util.spec_from_file_location("validate_agent_definitions", VALIDATOR)
-assert validator_spec is not None and validator_spec.loader is not None
+assert validator_spec is not None
+assert validator_spec.loader is not None
 validator_module = importlib.util.module_from_spec(validator_spec)
 validator_spec.loader.exec_module(validator_module)
 
@@ -25,6 +26,26 @@ class AgentSetupTests(unittest.TestCase):
     def test_validator_succeeds(self):
         result = subprocess.run(["python3", str(VALIDATOR)], cwd=ROOT, text=True, capture_output=True)
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_frontmatter_parser_preserves_nested_and_scalar_values(self):
+        text = """---
+root:
+  child: "value"
+  apostrophe: 'it''s'
+empty:
+---
+"""
+
+        parsed = validator_module.parse_frontmatter(text)
+
+        self.assertEqual(
+            parsed,
+            {"root": {"child": "value", "apostrophe": "it's"}, "empty": {}},
+        )
+
+    def test_frontmatter_parser_rejects_non_mapping_entries(self):
+        with self.assertRaisesRegex(ValueError, "expected a mapping entry"):
+            validator_module.parse_frontmatter("---\nnot a mapping\n---\n")
 
     def test_active_profiles_only_define_harness_metadata_and_models(self):
         expected = {

@@ -10,12 +10,12 @@ EOF
 }
 
 clean_install=false
-if [ "${1:-}" = "--clean" ]; then
+if [[ "${1:-}" = "--clean" ]]; then
   clean_install=true
   shift
 fi
 
-if [ "$#" -ne 2 ]; then
+if [[ "$#" -ne 2 ]]; then
   echo "Expected a harness and target directory." >&2
   usage >&2
   exit 2
@@ -42,7 +42,7 @@ case "$harness" in
     ;;
 esac
 
-if [ -z "$target_arg" ] || [[ "$target_arg" == -* ]]; then
+if [[ -z "$target_arg" || "$target_arg" == -* ]]; then
   echo "Invalid target directory: $target_arg" >&2
   exit 2
 fi
@@ -54,17 +54,17 @@ destination_dir="$target_dir/$destination_suffix"
 source_dir="$(realpath -m -- "$source_dir")"
 destination_dir="$(realpath -m -- "$destination_dir")"
 
-if [ ! -d "$source_dir" ]; then
+if [[ ! -d "$source_dir" ]]; then
   echo "Missing install source: $source_dir" >&2
   exit 1
 fi
 
-if [ "$clean_install" = true ]; then
-  if [ "$target_dir" = "/" ] || [ "$target_dir" = "$script_dir" ]; then
+if [[ "$clean_install" = true ]]; then
+  if [[ "$target_dir" = "/" || "$target_dir" = "$script_dir" ]]; then
     echo "Refusing to clean unsafe target directory: $target_dir" >&2
     exit 2
   fi
-  if [ "$destination_dir" = "$source_dir" ] \
+  if [[ "$destination_dir" = "$source_dir" ]] \
     || [[ "$destination_dir" == "$source_dir"/* ]] \
     || [[ "$source_dir" == "$destination_dir"/* ]]; then
     echo "Refusing to clean destination overlapping install source: $destination_dir" >&2
@@ -72,7 +72,7 @@ if [ "$clean_install" = true ]; then
   fi
 fi
 
-if [ "$clean_install" = true ]; then
+if [[ "$clean_install" = true ]]; then
   rm -rf -- "$destination_dir"
 fi
 mkdir -p -- "$destination_dir"

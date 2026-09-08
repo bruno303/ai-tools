@@ -65,7 +65,7 @@ EXPECTED = {
     },
 }
 
-KEY_PATTERN = re.compile(r"(?P<key>[A-Za-z_][A-Za-z0-9_-]*):(?:[ \t]*(?P<value>.*))?$")
+KEY_PATTERN = re.compile(r"(?P<key>[A-Za-z_][A-Za-z0-9_-]*):")
 
 
 def _parse_scalar(value: str, line_number: int) -> str:
@@ -81,42 +81,45 @@ def _parse_scalar(value: str, line_number: int) -> str:
     return value
 
 
-def parse_frontmatter(text: str) -> dict[str, Any]:
-    """Parse the small YAML mapping used by the repository's agent headers."""
-
-    lines = text.splitlines()
+def _find_frontmatter_end(lines: list[str]) -> int:
     if not lines or lines[0].strip() != "---":
         raise ValueError("missing opening frontmatter delimiter")
-    try:
-        end = next(index for index, line in enumerate(lines[1:], start=1) if line.strip() == "---")
-    except StopIteration as exc:
-        raise ValueError("missing closing frontmatter delimiter") from exc
+    for index, line in enumerate(lines[1:], start=1):
+        if line.strip() == "---":
+            return index
+    raise ValueError("missing closing frontmatter delimiter")
 
+
+def _parse_frontmatter_line(line: str, line_number: int) -> tuple[int, str, str]:
+    indentation = line[: len(line) - len(line.lstrip(" "))]
+    if "\t" in indentation:
+        raise ValueError(f"line {line_number}: tabs are not valid indentation")
+    indent = len(indentation)
+    content = line[indent:]
+    match = KEY_PATTERN.match(content)
+    if not match:
+        raise ValueError(f"line {line_number}: expected a mapping entry")
+    return indent, match.group("key"), content[match.end() :]
+
+
+def _parse_frontmatter_mapping(lines: list[str]) -> dict[str, Any]:
     root: dict[str, Any] = {}
     stack: list[tuple[int, dict[str, Any]]] = [(-1, root)]
     last_indent = -1
     last_created_mapping = True
 
-    for line_number, line in enumerate(lines[1:end], start=2):
+    for line_number, line in enumerate(lines, start=2):
         if not line.strip():
             continue
-        if "\t" in line[: len(line) - len(line.lstrip(" "))]:
-            raise ValueError(f"line {line_number}: tabs are not valid indentation")
-        indent = len(line) - len(line.lstrip(" "))
-        content = line[indent:]
-        match = KEY_PATTERN.fullmatch(content)
-        if not match:
-            raise ValueError(f"line {line_number}: expected a mapping entry")
+        indent, key, raw_value = _parse_frontmatter_line(line, line_number)
         if indent > last_indent and not last_created_mapping:
             raise ValueError(f"line {line_number}: unexpected indentation")
         while indent <= stack[-1][0]:
             stack.pop()
         mapping = stack[-1][1]
-        key = match.group("key")
         if key in mapping:
             raise ValueError(f"line {line_number}: duplicate key {key!r}")
-        raw_value = match.group("value")
-        if raw_value is None or not raw_value.strip():
+        if not raw_value.strip():
             value: Any = {}
             last_created_mapping = True
         else:
@@ -127,6 +130,15 @@ def parse_frontmatter(text: str) -> dict[str, Any]:
         if last_created_mapping:
             stack.append((indent, value))
 
+    return root
+
+
+def parse_frontmatter(text: str) -> dict[str, Any]:
+    """Parse the small YAML mapping used by the repository's agent headers."""
+
+    lines = text.splitlines()
+    end = _find_frontmatter_end(lines)
+    root = _parse_frontmatter_mapping(lines[1:end])
     if not root:
         raise ValueError("frontmatter must contain at least one field")
     if any(line.strip() for line in lines[end + 1 :]):
@@ -162,7 +174,7 @@ def _parse_definition(path: Path, definition_format: str) -> tuple[dict[str, Any
                 return None, "top-level value must be a table"
             return value, None
         return parse_frontmatter(text), None
-    except (tomllib.TOMLDecodeError, UnicodeDecodeError, ValueError) as exc:
+    except ValueError as exc:
         return None, str(exc)
 
 

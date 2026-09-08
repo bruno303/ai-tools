@@ -28,7 +28,7 @@ while [ "$#" -gt 0 ]; do
 done
 
 target_dir="${target_arg:-${TARGET_DIR:-}}"
-if [ -z "$target_dir" ]; then
+if [[ -z "$target_dir" ]]; then
   usage >&2
   exit 2
 fi
