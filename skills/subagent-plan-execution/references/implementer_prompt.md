@@ -51,6 +51,6 @@ BLOCKERS:
 ## Response Format
 
 Return exactly one of:
-- `DONE` — all outputs created and verified.
+- `DONE` — implementation is complete and the required verification status has been recorded in the report.
 - `BLOCKED: SCOPE_EXPANSION: <path> — <reason>` — an undeclared path is clearly required to complete the approved task safely.
 - `BLOCKED: <reason>` — you cannot complete the task for another reason. Be specific about what's missing (need more context, ambiguous spec, dependency unavailable, etc.). Do not guess — if you're unsure about something, report BLOCKED with the specific question.
