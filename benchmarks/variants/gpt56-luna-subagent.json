@@ -1,0 +1,12 @@
+{
+  "name": "opencode-gpt56-luna-subagent",
+  "command": [
+    "opencode",
+    "run",
+    "--model",
+    "openai/gpt-5.6-luna",
+    "{task_content}. Use subagent-plan-execution to implement this task"
+  ],
+  "setup": [],
+  "env": {}
+}
