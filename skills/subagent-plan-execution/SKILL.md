@@ -83,7 +83,9 @@ Before dispatching workers:
    before the first task brief. Capture each task baseline after that task's
    brief has been created and verified, but before its worker is dispatched. A
    task baseline must represent the current worktree, not only `HEAD`, because
-   earlier tasks may be uncommitted.
+   earlier tasks may be uncommitted. Once captured, that task baseline is
+   immutable for the lifetime of the execution unit, including scope expansion
+   and its optional fix pass.
 
 When Git is available, materialize each baseline in a temporary index/tree:
 start an index at `HEAD` (or an empty index for a repository with no `HEAD`),
@@ -120,14 +122,18 @@ reviewer diff.
 
 ## Step 1: Execute each task
 
-Run tasks serially by default. Independent tasks may run concurrently only when
-both conditions hold:
+Run tasks serially by default. Independent tasks may run concurrently only when:
 
-- there is no dependency path between them; and
-- their declared writable scopes do not overlap.
+- there is no dependency path between them;
+- their declared writable scopes do not overlap; and
+- each concurrent task runs in its own isolated worktree/workspace.
 
-Use isolated worktrees when shared-worktree concurrency is unsafe. If scopes or
-dependencies are ambiguous, remain serial and record why.
+Do not run concurrent workers against the same worktree. After concurrent tasks
+finish and pass their task gates, integrate their approved changes back into the
+main worktree before continuing with later tasks. If integration conflicts,
+stop and resolve the conflict explicitly rather than letting later workers run
+against an ambiguous state. If isolated worktrees are unavailable, keep the
+execution serial.
 
 ### 1a. Write the brief file
 
@@ -187,7 +193,7 @@ a separate report-writing subagent.
 | Response | Action |
 |---|---|
 | **DONE** | Proceed to the scoped review. |
-| **BLOCKED: SCOPE_EXPANSION: <path> — <reason>** | Decide whether the path is genuinely required by the approved task. If yes, add it explicitly to the task's expected-output scope/brief, refresh the task baseline if needed before any new edits, and re-dispatch once. If not, keep the scope unchanged and stop or clarify. Never let a worker silently broaden its own scope. |
+| **BLOCKED: SCOPE_EXPANSION: <path> — <reason>** | Decide whether the path is genuinely required by the approved task. If yes, add it explicitly to the task's expected-output scope/brief and re-dispatch once using the original task baseline. Do not refresh the baseline. If not, keep the scope unchanged and stop or clarify. Never let a worker silently broaden its own scope. |
 | **BLOCKED: <reason>** | Fix the blocker (add context, clarify spec, or split the task) and re-dispatch once. If the retry is blocked, stop the task and report the unresolved blocker; do not retry indefinitely. |
 
 ### 1c. Lightweight, task-scoped review
@@ -223,8 +229,9 @@ The scoped diff procedure must:
    failure. Never silently broaden the reviewer input to include unexpected
    files. If an unexpected path is clearly necessary to satisfy the approved
    task, the orchestrator may explicitly add it to the task scope, update the
-   brief/output list, and regenerate the scoped artifact; otherwise stop the
-   task or obtain an explicit orchestration decision.
+   brief/output list, and regenerate the scoped artifact from the same original
+   task baseline; otherwise stop the task or obtain an explicit orchestration
+   decision.
 6. Generate the diff only for the expected implementation paths, including both
    sides of a rename and all relevant new/deleted content. Do not include the
    report or any other workflow artifact. For example:
