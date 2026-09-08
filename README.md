@@ -4,29 +4,23 @@ Reusable agent and skill definitions for agentic software development workflows.
 
 ## Repository Overview
 
-- `opencode/agents/` contains OpenCode agent prompts (`architect`, `builder`, `spec-driver`, `reviewer`) in Markdown.
+- `opencode/agents/`, `codex/agents/`, and `claude/agents/` contain the active `executor` and `reviewer` roles in each harness's native format.
+- `archive/opencode/agents/` preserves the retired `architect`, `builder`, `reviewer`, and `spec-driver` definitions for reference; archived files are not installed.
 - `skills/` contains reusable skills shared across agents.
 - `benchmarks/` contains a harness-agnostic runner and repeatable scenarios for comparing models, skills, and workflows.
 
 ## Agents
 
-The same four agents are defined for both runtimes:
+Each harness ships two model-only profiles:
 
-- **`architect`** (`opencode/agents/architect.md`, `codex/agents/architect.toml`)
-  - Orchestrates delivery as: discover -> plan -> build -> optional review -> human approval.
-  - Delegates implementation to `builder` and requires explicit `Approve` before execution.
+- **`executor`** selects the implementation model.
+- **`reviewer`** selects the review model.
 
-- **`builder`** (`opencode/agents/builder.md`, `codex/agents/builder.toml`)
-  - Implementation subagent that writes production code and tests from approved tasks.
-  - Uses a strict handback format with verification results and blockers.
+The active agent files intentionally contain no behavioral prompt, handback schema, or workflow instructions. Skills provide those instructions and coordinate how the main agent uses each profile.
 
-- **`reviewer`** (`opencode/agents/reviewer.md`, `codex/agents/reviewer.toml`)
-  - Read-only senior reviewer focused on correctness, contracts, coverage, reliability, and architecture.
-  - Reports evidence-based findings with severity and fix direction.
+The former `architect`, `builder`, and `spec-driver` orchestration roles, along with the prior reviewer prompt, are archived under `archive/opencode/agents/`.
 
-- **`spec-driver`** (`opencode/agents/spec-driver.md`, `codex/agents/spec-driver.toml`)
-  - Spec-first agent that turns feature requests into implementation-ready specification drafts.
-  - Requires clarification for ambiguity and can return `DRAFT READY` or `BLOCKED`.
+Model assignments are native to each harness: OpenCode uses `opencode/gpt-5.6-luna` for the executor and `opencode/gpt-5.6-sol` for the reviewer; Codex uses `gpt-5.6-luna` and `gpt-5.6-sol`; Claude uses `haiku` and `sonnet`. Customize only the model fields in the corresponding files under `opencode/agents/`, `codex/agents/`, or `claude/agents/`.
 
 ## Skills
 
@@ -63,6 +57,15 @@ See `benchmarks/README.md` for scenario and variant authoring guidance.
 
 ## Installation
 
+Install the active pair for one harness into a target repository:
+
+```bash
+./install-agents.sh <opencode|codex|claude> <target-dir>
+./install-agents.sh --clean <opencode|codex|claude> <target-dir>
+```
+
+Destinations are `<target>/agents` for OpenCode, `<target>/.codex/agents` for Codex, and `<target>/.claude/agents` for Claude. `--clean` removes only the selected harness's agent directory. The compatibility command `opencode/install.sh [--clean] [--remove-model] <target-dir>` remains available for OpenCode's existing workflow.
+
 Install the skills from this repo globally (no clone required):
 
 ```bash
@@ -77,8 +80,6 @@ Or run `install-skils.sh`, which also installs external skills (`using-git-workt
 
 ## Operating Model
 
-- `architect` coordinates planning and approval gates.
-- `builder` owns production code changes and tests.
-- `reviewer` performs scoped, read-only quality review.
-- `spec-driver` is the spec-first path when requirements need to be formalized before coding.
+- The main agent/orchestrator and skills own discovery, planning, approval, coordination, and final integration.
+- Select the native model profile needed by the coordinating skill; the archived legacy definitions are not part of the active installation.
 - Skills are loaded as needed based on task type (analysis, planning, API/DB changes, verification, review, debugging, language conventions).
