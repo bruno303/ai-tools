@@ -10,18 +10,15 @@
 - `opencode.jsonc` enables a local Serena MCP server via `uvx`; several prompts require Serena-first repository inspection when available.
 
 ## Structure That Matters
-- `agents/*.md` are Markdown prompt files with YAML frontmatter.
+- `agents/*.md` are model-only Markdown profiles with YAML frontmatter. The active set is `executor.md` and `reviewer.md`; retired definitions are under `../archive/opencode/agents/` and are not installed.
 - `skills/<skill-name>/SKILL.md` are Markdown skill files with YAML frontmatter.
 - `plugins/wsl-notify.ts` exists for local OpenCode usage, but it is not installed by `install.sh`.
 - `install.sh` does not copy `AGENTS.md`, `README.md`, `plugins/`, or `opencode.jsonc`.
 
-## Prompt Contracts To Preserve
-- Keep exact handback schemas and status labels stable unless you intentionally update the owning prompt everywhere it is relied on.
-- Preserve role boundaries encoded in the prompts:
-- `architect` delegates and requires explicit `Approve` before execution.
-- `builder` writes production code and tests.
-- `reviewer` is read-only.
-- `freelancer` is the single-agent full-delivery path for small tasks.
+## Model Profile Contract
+- Keep active agent files limited to harness metadata and model selection.
+- Do not add behavioral prompts, handback schemas, or workflow coordination to active agent files; those belong in skills.
+- The former `architect`, `builder`, `spec-driver`, and prior reviewer prompts are archived under `../archive/opencode/agents/`; they are not active installation inputs.
 
 ## Verified Commands
 - Syntax check installer: `bash -n install.sh`
@@ -29,8 +26,9 @@
 - Verify installer usage: `bash install.sh --help`
 
 ## Script Behavior Worth Remembering
-- `install.sh` accepts `--clean` or `-c`, a positional target directory, or `TARGET_DIR`.
-- `install.sh` replaces existing destination files and copies every `agents/*.md` file plus every directory under `skills/`.
+- `install.sh` accepts `--clean` or `-c`, a positional target directory, or `TARGET_DIR`, and preserves `--remove-model` for compatibility.
+- `install.sh` delegates active OpenCode agent installation to `../install-agents.sh`, which replaces only `agents/executor.md` and `agents/reviewer.md`.
+- The root installer also supports Codex (`<target>/.codex/agents`) and Claude (`<target>/.claude/agents`).
 - `ai-tools.sh` defines `opencode-run()` as a Docker wrapper that mounts the current working tree plus OpenCode config and state directories.
 
 ## Repo Reality
