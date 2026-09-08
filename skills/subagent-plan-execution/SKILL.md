@@ -33,6 +33,33 @@ contains the implementer and reviewer prompt templates. If you loaded this skill
 from a file path, resolve paths relative to that directory. If unsure, search
 your filesystem for `implementer_prompt.md` — it lives next to this file.
 
+## Worker profile contract
+
+The active `executor` and `reviewer` profiles are model-only definitions. They
+select the model and any harness-native reasoning settings; this skill owns the
+behavioral instructions, task contracts, review gates, and handback formats.
+
+Before dispatching the first worker, confirm that the host runtime can resolve
+both profiles by name through its native agent/profile selector:
+
+| Workflow role | Profile |
+|---|---|
+| Task implementer | `executor` |
+| Task-scoped fixer | `executor` |
+| Lightweight task reviewer | `reviewer` |
+| Final aggregate reviewer | `reviewer` |
+| Final consolidated fixer | `executor` |
+
+Use the selected profile name when dispatching each worker. If the host runtime
+exposes an `agent` or `agent_type` dispatch field, set that field to the
+selected profile name. Do not pass a concrete model ID or override the
+profile's model settings. The main agent remains the orchestrator and does not
+switch to either worker profile.
+
+If either profile cannot be resolved, stop before dispatching workers and report
+`MISSING_AGENT_PROFILE: <profile>` with the harness-specific setup required.
+Do not silently fall back to the orchestrator's default model.
+
 ## Step 0: Load and normalize the plan
 
 If the plan already exists as a file (for example, `plan.md` or
@@ -181,9 +208,9 @@ repository gate. If the repository or plan establishes that a check is not
 applicable, pass that fact explicitly so the implementer records it rather than
 inventing a command.
 
-Dispatch a fresh subagent with the project root path so it can resolve
-`{brief_path}`. Do not paste the full plan or spec into the dispatch prompt —
-the brief file is the contract.
+Dispatch a fresh subagent with the `executor` profile and the project root path
+so it can resolve `{brief_path}`. Do not paste the full plan or spec into the
+dispatch prompt — the brief file is the contract.
 
 The implementer must write its concise report as its final step. Do not dispatch
 a separate report-writing subagent.
@@ -246,15 +273,16 @@ The scoped diff procedure must:
 
 The reviewer receives only the task brief, task report, and this scoped diff at
 first. Read `references/reviewer_prompt.md`, fill in `{brief_path}`,
-`{report_path}`, and `{diff_path}`, then dispatch one fresh reviewer. Do not do
-broad architectural or end-to-end review at this stage.
+`{report_path}`, and `{diff_path}`, then dispatch one fresh worker with the
+`reviewer` profile. Do not do broad architectural or end-to-end review at this
+stage.
 
 #### Reviewer result handling
 
 | Response | Action |
 |---|---|
 | **`STATUS: PASSED`** | Proceed to the task handback gate. |
-| **`STATUS: CHANGES_REQUESTED`** | Dispatch one fresh implementer/fixer for a single consolidated fix pass containing the findings. It may modify only the declared expected outputs and its task report; it must not modify generated diff artifacts. The fixer must rerun the focused verification command and update the report. Regenerate the scoped diff if an updated artifact is needed. Do not re-review the task. |
+| **`STATUS: CHANGES_REQUESTED`** | Dispatch one fresh `executor` fixer for a single consolidated fix pass containing the findings. It may modify only the declared expected outputs and its task report; it must not modify generated diff artifacts. The fixer must rerun the focused verification command and update the report. Regenerate the scoped diff if an updated artifact is needed. Do not re-review the task. |
 
 If the reviewer flags something that is demonstrably correct (for example,
 existing behavior compiles, tests pass, and follows the contract), reject that
@@ -297,7 +325,8 @@ scopes, preserve new/deleted/renamed files, and do not use only the last task's
 diff. Generated plan, report, and review artifacts are inputs to the workflow,
 not implementation changes to review.
 
-Read `references/final_reviewer_prompt.md` and dispatch one fresh reviewer with:
+Read `references/final_reviewer_prompt.md` and dispatch one fresh worker with
+the `reviewer` profile and:
 
 - the complete plan;
 - all implementation reports;
@@ -308,11 +337,12 @@ end-to-end. This is the only full aggregate review.
 
 If the final reviewer returns `STATUS: PASSED`, proceed to the final quality
 gate. If it returns `STATUS: CHANGES_REQUESTED`, dispatch one final
-consolidated fixer with all critical, high, and medium findings plus practical
-low findings. The fixer may not edit generated diff artifacts. If it returns
-`STATUS: OK`, regenerate the aggregate artifact if needed and run the final
-quality gate. If it returns `STATUS: BLOCKED`, stop and report the unresolved
-blocker; do not dispatch another reviewer or automatic fix loop.
+consolidated fixer with the `executor` profile and all critical, high, and
+medium findings plus practical low findings. The fixer may not edit generated
+diff artifacts. If it returns `STATUS: OK`, regenerate the aggregate artifact
+if needed and run the final quality gate. If it returns `STATUS: BLOCKED`, stop
+and report the unresolved blocker; do not dispatch another reviewer or
+automatic fix loop.
 
 ## Step 3: Final quality gate
 
@@ -329,20 +359,13 @@ with the reason; do not treat it as passed.
 If a final gate fails, report the unresolved verification failure. Do not start
 another automatic fix/review loop.
 
-## Optional worker settings
+## Model and reasoning settings
 
-Where the host runtime supports per-agent configuration, match the budget to
-the work:
-
-- lightweight task reviewers: fast model with low/medium reasoning;
-- straightforward task fixers: fast model with medium reasoning;
-- complex implementers: higher reasoning only when task uncertainty requires it;
-- final aggregate reviewer: high reasoning;
-- final consolidated fixer: high reasoning for cross-cutting findings.
-
-When per-agent model or reasoning settings are unavailable, use the runtime's
-normal configuration and preserve the same prompts, scopes, and handback
-contracts. Do not change required status labels to accommodate a runtime.
+Do not select concrete model IDs or override model/reasoning settings in this
+workflow. The selected profile is the source of truth for those settings, which
+keeps the workflow portable across harnesses. If a runtime cannot resolve a
+named profile, apply the missing-profile rule above instead of using its normal
+default configuration.
 
 ## Context discipline
 

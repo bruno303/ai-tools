@@ -81,5 +81,6 @@ Or run `install-skils.sh`, which also installs external skills (`using-git-workt
 ## Operating Model
 
 - The main agent/orchestrator and skills own discovery, planning, approval, coordination, and final integration.
+- `subagent-plan-execution` dispatches implementation and fix workers through the `executor` profile and review workers through the `reviewer` profile; those profiles own model selection while the skill owns behavior.
 - Select the native model profile needed by the coordinating skill; the archived legacy definitions are not part of the active installation.
 - Skills are loaded as needed based on task type (analysis, planning, API/DB changes, verification, review, debugging, language conventions).
