@@ -1,0 +1,12 @@
+{
+  "name": "opencode-gpt56-baseline",
+  "command": [
+    "opencode",
+    "run",
+    "--model",
+    "openai/gpt-5.6",
+    "{task_content}"
+  ],
+  "setup": [],
+  "env": {}
+}

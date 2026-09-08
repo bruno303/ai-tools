@@ -6,6 +6,7 @@ Reusable agent and skill definitions for agentic software development workflows.
 
 - `opencode/agents/` contains OpenCode agent prompts (`architect`, `builder`, `spec-driver`, `reviewer`) in Markdown.
 - `skills/` contains reusable skills shared across agents.
+- `benchmarks/` contains a harness-agnostic runner and repeatable scenarios for comparing models, skills, and workflows.
 
 ## Agents
 
@@ -45,6 +46,20 @@ The same four agents are defined for both runtimes:
 - **`skills/subagent-plan-execution/SKILL.md`** - execute an existing implementation plan with lightweight task gates, one final aggregate code review, bounded fix passes, and non-looping quality gates.
 - **`skills/grill-me/SKILL.md`** - identify only implementation-relevant ambiguities, infer safe defaults from the repository, and batch unresolved decisions instead of asking confirmation-only questions.
 - **`skills/init-agents-md/SKILL.md`** - create or update the root `AGENTS.md` with workflows, commands, architecture, and agent working rules.
+
+## Benchmarks
+
+The benchmark runner compares coding-agent setups against the same isolated scenario and deterministic evaluators. A variant is just a command plus optional setup/environment, so OpenCode, Codex, Claude Code, custom orchestrators, different models, and different skill sets can all be compared without coupling the benchmark to a specific harness.
+
+```bash
+python3 benchmarks/benchmark.py run \
+  benchmarks/scenarios/normalize-username/scenario.json \
+  benchmarks/variants/opencode.example.json
+```
+
+Runs persist independent JSON results with success, verification output, and wall-clock time. Optional harness-exported token/call metrics are also preserved. Use `--repeat` for nondeterministic sampling and `benchmark.py compare` to aggregate success rate and median cost.
+
+See `benchmarks/README.md` for scenario and variant authoring guidance.
 
 ## Installation
 
