@@ -68,9 +68,18 @@ Before dispatching workers:
    from an independent checkpoint.
 2. Do not merge tasks that are independent, substantially different in
    context, individually complex, or meaningful checkpoints.
-3. Preserve every requirement and dependency when consolidating tasks.
+3. Preserve every requirement and dependency when consolidating tasks. For a
+   consolidated execution unit, write a single brief that contains the original
+   merged task specifications verbatim, in plan order, followed only by the
+   combined dependency set and combined expected-output scope needed to execute
+   them as one task. Do not rewrite or summarize away any original requirement.
 4. Record each task's dependency set and expected writable file scope.
-5. Capture an implementation baseline after the plan file has been created and
+5. Before dispatch, validate the declared writable scope against the task's
+   direct contracts/callers/configuration when this can be done cheaply. The
+   orchestrator may add a clearly necessary supporting path to the task scope
+   before dispatch, but it must record that path explicitly in the brief/output
+   list; never silently broaden the scope.
+6. Capture an implementation baseline after the plan file has been created and
    before the first task brief. Capture each task baseline after that task's
    brief has been created and verified, but before its worker is dispatched. A
    task baseline must represent the current worktree, not only `HEAD`, because
@@ -122,8 +131,11 @@ dependencies are ambiguous, remain serial and record why.
 
 ### 1a. Write the brief file
 
-Create `.agents/plans/task-N-brief.md` containing the task specification
-verbatim from the plan. Nothing else belongs in this file.
+For a normal task, create `.agents/plans/task-N-brief.md` containing the task
+specification verbatim from the plan. For a consolidated task, include each
+merged original task specification verbatim and in plan order, then append only
+the combined dependency set and combined expected-output scope established in
+Step 0. Do not rewrite the underlying requirements.
 
 Expected outputs must identify every path the worker may create or modify,
 regardless of file type. Represent intentional operations explicitly when
@@ -175,6 +187,7 @@ a separate report-writing subagent.
 | Response | Action |
 |---|---|
 | **DONE** | Proceed to the scoped review. |
+| **BLOCKED: SCOPE_EXPANSION: <path> — <reason>** | Decide whether the path is genuinely required by the approved task. If yes, add it explicitly to the task's expected-output scope/brief, refresh the task baseline if needed before any new edits, and re-dispatch once. If not, keep the scope unchanged and stop or clarify. Never let a worker silently broaden its own scope. |
 | **BLOCKED: <reason>** | Fix the blocker (add context, clarify spec, or split the task) and re-dispatch once. If the retry is blocked, stop the task and report the unresolved blocker; do not retry indefinitely. |
 
 ### 1c. Lightweight, task-scoped review
@@ -208,7 +221,10 @@ The scoped diff procedure must:
    old-path deletion plus new-path addition.
 5. Report missing expected outputs and unexpected changed paths as a scope
    failure. Never silently broaden the reviewer input to include unexpected
-   files; stop the task or obtain an explicit orchestration decision.
+   files. If an unexpected path is clearly necessary to satisfy the approved
+   task, the orchestrator may explicitly add it to the task scope, update the
+   brief/output list, and regenerate the scoped artifact; otherwise stop the
+   task or obtain an explicit orchestration decision.
 6. Generate the diff only for the expected implementation paths, including both
    sides of a rename and all relevant new/deleted content. Do not include the
    report or any other workflow artifact. For example:
@@ -249,8 +265,8 @@ orchestrator should not automatically rerun the same successful command.
 Validate the following instead:
 
 1. The report is present and identifies changed paths and decisions.
-2. The report contains the exact focused command and a result supported by the
-   worker's output.
+2. The report contains the exact focused command and its recorded result, with
+   any notes needed to make the evidence understandable.
 3. The scope guard passed with no missing or unexpected paths.
 4. Any unavailable or not-applicable check is stated explicitly.
 
