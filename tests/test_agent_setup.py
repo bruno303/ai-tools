@@ -27,6 +27,35 @@ class AgentSetupTests(unittest.TestCase):
         result = subprocess.run(["python3", str(VALIDATOR)], cwd=ROOT, text=True, capture_output=True)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_validator_accepts_custom_model_selection(self):
+        customizations = {
+            "opencode": {
+                "executor.md": [("opencode/gpt-5.6-luna", "custom/executor"), ("medium", "high")],
+                "reviewer.md": [("opencode/gpt-5.6-sol", "custom/reviewer"), ("low", "minimal")],
+            },
+            "codex": {
+                "executor.toml": [("gpt-5.6-luna", "custom-executor"), ("medium", "high")],
+                "reviewer.toml": [("gpt-5.6-sol", "custom-reviewer"), ("low", "minimal")],
+            },
+            "claude": {
+                "executor.md": [("haiku", "custom-executor")],
+                "reviewer.md": [("sonnet", "custom-reviewer")],
+            },
+        }
+
+        with tempfile.TemporaryDirectory() as root:
+            fixture_root = Path(root)
+            for harness, files in customizations.items():
+                shutil.copytree(ROOT / harness, fixture_root / harness)
+                for filename, replacements in files.items():
+                    path = fixture_root / harness / "agents" / filename
+                    content = path.read_text(encoding="utf-8")
+                    for original, replacement in replacements:
+                        content = content.replace(original, replacement)
+                    path.write_text(content, encoding="utf-8")
+
+                self.assertEqual(validator_module.validate_harness(fixture_root, harness), [])
+
     def test_frontmatter_parser_preserves_nested_and_scalar_values(self):
         text = """---
 root:

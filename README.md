@@ -20,7 +20,7 @@ The active agent files intentionally contain no behavioral prompt, handback sche
 
 The former `architect`, `builder`, and `spec-driver` orchestration roles, along with the prior reviewer prompt, are archived under `archive/opencode/agents/`.
 
-Model assignments are native to each harness: OpenCode uses `opencode/gpt-5.6-luna` for the executor and `opencode/gpt-5.6-sol` for the reviewer; Codex uses `gpt-5.6-luna` and `gpt-5.6-sol`; Claude uses `haiku` and `sonnet`. Customize only the model fields in the corresponding files under `opencode/agents/`, `codex/agents/`, or `claude/agents/`.
+Model assignments are native to each harness: OpenCode uses `opencode/gpt-5.6-luna` for the executor and `opencode/gpt-5.6-sol` for the reviewer; Codex uses `gpt-5.6-luna` and `gpt-5.6-sol`; Claude uses `haiku` and `sonnet`. Customize model and, where supported, reasoning-effort fields in the corresponding files under `opencode/agents/`, `codex/agents/`, or `claude/agents/`.
 
 ## Skills
 

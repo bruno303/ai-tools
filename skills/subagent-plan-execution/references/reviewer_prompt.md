@@ -15,9 +15,8 @@ scope by performing a broad repository review.
 5. Do not modify files or perform a broad architectural/end-to-end review; the final reviewer handles that. Do not read previous task reports, unrelated documentation, or recursively inspect dependency trees.
 6. Do not automatically read complete changed files, run broad repository searches, or rerun tests. Use the report's focused verification evidence; run a narrow check only when the handback is missing required evidence or a concrete concern cannot otherwise be resolved.
 
-Where the host runtime supports it, use a small step/output budget and a fast
-model with low or medium reasoning. If it does not support per-reviewer
-settings, keep the same bounded behavior with the normal runtime configuration.
+Where the host runtime supports it, use a small step/output budget. The selected
+reviewer profile controls model and reasoning settings.
 
 ## What to Check
 

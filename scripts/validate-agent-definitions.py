@@ -17,13 +17,13 @@ EXPECTED = {
         "required": {
             "executor": {
                 "mode": "subagent",
-                "model": "opencode/gpt-5.6-luna",
-                "reasoningEffort": "medium",
+                "model": None,
+                "reasoningEffort": None,
             },
             "reviewer": {
                 "mode": "subagent",
-                "model": "opencode/gpt-5.6-sol",
-                "reasoningEffort": "low",
+                "model": None,
+                "reasoningEffort": None,
             },
         },
     },
@@ -34,15 +34,15 @@ EXPECTED = {
             "executor": {
                 "name": "executor",
                 "description": None,
-                "model": "gpt-5.6-luna",
-                "model_reasoning_effort": "medium",
+                "model": None,
+                "model_reasoning_effort": None,
                 "developer_instructions": "",
             },
             "reviewer": {
                 "name": "reviewer",
                 "description": None,
-                "model": "gpt-5.6-sol",
-                "model_reasoning_effort": "low",
+                "model": None,
+                "model_reasoning_effort": None,
                 "developer_instructions": "",
             },
         },
@@ -54,12 +54,12 @@ EXPECTED = {
             "executor": {
                 "name": "executor",
                 "description": None,
-                "model": "haiku",
+                "model": None,
             },
             "reviewer": {
                 "name": "reviewer",
                 "description": None,
-                "model": "sonnet",
+                "model": None,
             },
         },
     },
