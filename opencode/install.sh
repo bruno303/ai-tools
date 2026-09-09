@@ -5,42 +5,21 @@ usage() {
   cat <<EOF
 Usage: $0 [--clean] [--remove-model] <target-dir>
 Or set the TARGET_DIR environment variable.
-
-This script installs all files from \`agents/\` into <target-dir>/agents/
-Existing files are replaced.
-
-Options:
-  --clean, -c         Remove destination \`agents/\` before copying.
-  --remove-model      Remove any \`model: ...\` line from installed agent frontmatter.
 EOF
 }
 
-clean_install=false
+clean_args=()
 remove_model=false
 target_arg=""
-
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    --clean|-c)
-      clean_install=true
-      ;;
-    --remove-model)
-      remove_model=true
-      ;;
-    --help|-h)
-      usage
-      exit 0
-      ;;
-    -*)
-      echo "Unknown option: $1" >&2
-      usage
-      exit 2
-      ;;
+    --clean|-c) clean_args=(--clean) ;;
+    --remove-model) remove_model=true ;;
+    --help|-h) usage; exit 0 ;;
+    -*) echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
     *)
       if [ -n "$target_arg" ]; then
-        echo "Unexpected extra argument: $1" >&2
-        usage
-        exit 2
+        echo "Unexpected extra argument: $1" >&2; usage >&2; exit 2
       fi
       target_arg="$1"
       ;;
@@ -48,34 +27,23 @@ while [ "$#" -gt 0 ]; do
   shift
 done
 
-TARGET_DIR="${target_arg:-${TARGET_DIR:-}}"
-if [ -z "$TARGET_DIR" ]; then
-  usage
+target_dir="${target_arg:-${TARGET_DIR:-}}"
+if [[ -z "$target_dir" ]]; then
+  usage >&2
   exit 2
 fi
 
-TARGET_DIR=$(realpath "$TARGET_DIR")
-
-echo "Target directory: $TARGET_DIR"
-
-if [ "$clean_install" = true ]; then
-  echo "Cleaning destination agents/ directory"
-  rm -rf -- "$TARGET_DIR/agents"
+root_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
+target_dir="$(realpath -m -- "$target_dir")"
+if [ "$remove_model" = true ]; then
+  bash "$root_dir/install-agents.sh" "${clean_args[@]}" opencode "$target_dir"
+  temporary_dir="$(mktemp -d)"
+  trap 'rm -rf -- "$temporary_dir"' EXIT
+  for agent in executor reviewer; do
+    awk '!/^[[:space:]]*model:[[:space:]].*$/' \
+      "$target_dir/agents/$agent.md" > "$temporary_dir/$agent.md"
+    mv -- "$temporary_dir/$agent.md" "$target_dir/agents/$agent.md"
+  done
+else
+  bash "$root_dir/install-agents.sh" "${clean_args[@]}" opencode "$target_dir"
 fi
-
-mkdir -p "$TARGET_DIR/agents"
-shopt -s nullglob
-for f in agents/*.md; do
-  if [ -f "$f" ]; then
-    dest="$TARGET_DIR/agents/$(basename -- "$f")"
-    if [ "$remove_model" = true ]; then
-      awk '!/^[[:space:]]*model:[[:space:]].*$/' "$f" > "$dest"
-    else
-      cp -f -- "$f" "$dest"
-    fi
-    echo "Copied $f -> $TARGET_DIR/agents/"
-  fi
-done
-shopt -u nullglob
-
-echo "Done."
