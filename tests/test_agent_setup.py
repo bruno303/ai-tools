@@ -76,11 +76,15 @@ empty:
         with self.assertRaisesRegex(ValueError, "expected a mapping entry"):
             validator_module.parse_frontmatter("---\nnot a mapping\n---\n")
 
-    def test_active_profiles_only_define_harness_metadata_and_models(self):
+    def test_active_profiles_use_expected_harness_fields(self):
         expected = {
             "opencode": {"executor.md", "reviewer.md"},
             "codex": {"executor.toml", "reviewer.toml"},
             "claude": {"executor.md", "reviewer.md"},
+        }
+        expected_codex_instructions = {
+            "executor.toml": "You are an executor agent",
+            "reviewer.toml": "You are a reviewer agent",
         }
         for harness, filenames in expected.items():
             with self.subTest(harness=harness):
@@ -92,7 +96,7 @@ empty:
                             set(definition),
                             {"name", "description", "model", "model_reasoning_effort", "developer_instructions"},
                         )
-                        self.assertEqual(definition["developer_instructions"], "")
+                        self.assertEqual(definition["developer_instructions"], expected_codex_instructions[filename])
                     else:
                         definition = validator_module.parse_frontmatter(path.read_text(encoding="utf-8"))
                         self.assertEqual(
