@@ -1,5 +1,5 @@
 ---
 mode: subagent
-model: opencode/gpt-5.6-luna
+model: openai/gpt-5.6-luna
 reasoningEffort: medium
 ---
