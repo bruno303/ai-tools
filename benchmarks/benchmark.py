@@ -21,6 +21,8 @@ ROOT = Path(__file__).resolve().parent
 RESULTS_DIR = ROOT / "results"
 DURATION_SECONDS = "duration_seconds"
 INPUT_TOKENS = "input_tokens"
+GIT_IDENTITY_NAME = "benchmark"
+GIT_IDENTITY_EMAIL = "benchmark@localhost"
 RESULT_COUNTER = 0
 
 
@@ -90,6 +92,55 @@ def terminate_process_group(process: subprocess.Popen[str]) -> None:
         pass
 
 
+def emit_heartbeat(
+    started: float,
+    now: float,
+    timeout: int | None,
+    next_heartbeat: float,
+    quiet: bool,
+    verbose: bool,
+) -> float:
+    if not quiet and not verbose and now >= next_heartbeat:
+        heartbeat = f"running {int(now - started)}s / {timeout}s"
+        if os.isatty(2):
+            print(f"\r{heartbeat}", end="", file=os.sys.stderr, flush=True)
+        else:
+            print(heartbeat, file=os.sys.stderr, flush=True)
+        return now + 15
+    return next_heartbeat
+
+
+def read_ready_events(
+    selector: selectors.BaseSelector,
+    output: dict[str, bytearray],
+    verbose: bool,
+    quiet: bool,
+    timeout: float,
+) -> None:
+    for key, _ in selector.select(timeout=timeout):
+        data = os.read(key.fileobj.fileno(), 65536)
+        if not data:
+            selector.unregister(key.fileobj)
+            continue
+        stream = key.data
+        output[stream].extend(data)
+        if verbose and not quiet:
+            text = data.decode(errors="replace")
+            for line in text.splitlines(True):
+                print(f"[{stream}] {line}", end="", file=os.sys.stderr, flush=True)
+
+
+def drain_output(
+    selector: selectors.BaseSelector,
+    output: dict[str, bytearray],
+    verbose: bool,
+    quiet: bool,
+) -> None:
+    drain_deadline = time.monotonic() + 1
+    while selector.get_map() and time.monotonic() < drain_deadline:
+        read_ready_events(selector, output, verbose, quiet, timeout=0.05)
+
+
 def run_command(
     command: list[str],
     cwd: Path,
@@ -121,39 +172,11 @@ def run_command(
             if timeout is not None and now - started >= timeout:
                 timed_out = process.poll() is None
                 break
-            if not quiet and not verbose and now >= next_heartbeat:
-                heartbeat = f"running {int(now - started)}s / {timeout}s"
-                if os.isatty(2):
-                    print(f"\r{heartbeat}", end="", file=os.sys.stderr, flush=True)
-                else:
-                    print(heartbeat, file=os.sys.stderr, flush=True)
-                next_heartbeat = now + 15
-            events = selector.select(timeout=0.2)
-            for key, _ in events:
-                data = os.read(key.fileobj.fileno(), 65536)
-                if not data:
-                    selector.unregister(key.fileobj)
-                    continue
-                stream = key.data
-                output[stream].extend(data)
-                if verbose and not quiet:
-                    text = data.decode(errors="replace")
-                    for line in text.splitlines(True):
-                        print(f"[{stream}] {line}", end="", file=os.sys.stderr, flush=True)
+            next_heartbeat = emit_heartbeat(started, now, timeout, next_heartbeat, quiet, verbose)
+            read_ready_events(selector, output, verbose, quiet, timeout=0.2)
     finally:
         terminate_process_group(process)
-        drain_deadline = time.monotonic() + 1
-        while selector.get_map() and time.monotonic() < drain_deadline:
-            for key, _ in selector.select(timeout=0.05):
-                data = os.read(key.fileobj.fileno(), 65536)
-                if not data:
-                    selector.unregister(key.fileobj)
-                    continue
-                output[key.data].extend(data)
-                if verbose and not quiet:
-                    text = data.decode(errors="replace")
-                    for line in text.splitlines(True):
-                        print(f"[{key.data}] {line}", end="", file=os.sys.stderr, flush=True)
+        drain_output(selector, output, verbose, quiet)
         selector.close()
         process.stdout.close()
         process.stderr.close()
@@ -182,19 +205,19 @@ def init_workspace_repo(workspace: Path) -> None:
     git_env = os.environ.copy()
     git_env.update(
         {
-            "GIT_AUTHOR_NAME": "benchmark",
-            "GIT_AUTHOR_EMAIL": "benchmark@localhost",
-            "GIT_COMMITTER_NAME": "benchmark",
-            "GIT_COMMITTER_EMAIL": "benchmark@localhost",
+            "GIT_AUTHOR_NAME": GIT_IDENTITY_NAME,
+            "GIT_AUTHOR_EMAIL": GIT_IDENTITY_EMAIL,
+            "GIT_COMMITTER_NAME": GIT_IDENTITY_NAME,
+            "GIT_COMMITTER_EMAIL": GIT_IDENTITY_EMAIL,
         }
     )
     try:
         subprocess.run(["git", "init", "-q"], cwd=workspace, env=git_env, capture_output=True, timeout=30, check=False)
         subprocess.run(
-            ["git", "config", "user.name", "benchmark"], cwd=workspace, env=git_env, capture_output=True, timeout=30, check=False
+            ["git", "config", "user.name", GIT_IDENTITY_NAME], cwd=workspace, env=git_env, capture_output=True, timeout=30, check=False
         )
         subprocess.run(
-            ["git", "config", "user.email", "benchmark@localhost"], cwd=workspace, env=git_env, capture_output=True, timeout=30, check=False
+            ["git", "config", "user.email", GIT_IDENTITY_EMAIL], cwd=workspace, env=git_env, capture_output=True, timeout=30, check=False
         )
         subprocess.run(["git", "add", "-A"], cwd=workspace, env=git_env, capture_output=True, timeout=30, check=False)
         subprocess.run(
