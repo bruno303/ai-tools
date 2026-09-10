@@ -60,6 +60,16 @@ python3 benchmarks/benchmark.py run \
   benchmarks/variants/local.json
 ```
 
+Run multiple scenarios sequentially with the same variant. Scenario arguments
+may be `scenario.json` files or directories containing one; the final
+positional argument is always the variant:
+
+```bash
+python3 benchmarks/benchmark.py run \
+  benchmarks/scenarios/*/scenario.json \
+  benchmarks/variants/local.json
+```
+
 Run it five times:
 
 ```bash
@@ -75,7 +85,29 @@ Compare saved executions:
 python3 benchmarks/benchmark.py compare benchmarks/results/*.json
 ```
 
-The comparison prints a Markdown table with run count, success rate, median wall-clock time, and median input tokens when available.
+The comparison prints a Markdown table with scenario, variant, run count,
+success rate, median wall-clock time, and median input tokens when available.
+Use `--scenario NAME` and/or `--variant NAME` for exact-match filters.
+
+Each execution prints a header with its progress, scenario, variant, repeat
+number, and timeout, followed by a PASS/FAIL summary and result path. While a
+ command is running without `--verbose` or `--quiet`, the runner emits a
+ heartbeat about every 15 seconds with elapsed time and timeout. Pass
+ `--verbose` to stream captured stdout and stderr live with stream prefixes, or
+ `--quiet` to suppress heartbeats and streaming while keeping the header and
+ final summary. Use `--repeat N` for
+repeated executions, `--keep-workspace` to retain the temporary workspace,
+and `--results-dir DIR` to write result JSON files somewhere other than the
+default `benchmarks/results/` directory.
+
+Result filenames include a UTC timestamp with microseconds and a per-process
+counter, so fast repeats and batch runs remain separate.
+
+Every setup, agent, and verification command runs in its own process group.
+The fixture on disk is copied into a fresh temporary workspace (initialized as a
+git repository) for each execution and is never modified. On timeout and after a
+run, the runner terminates the whole process group, including leftover harness
+child processes, before the next execution.
 
 ## Scenario format
 
@@ -111,7 +143,7 @@ Prefer argument arrays. Commands are executed directly without a shell:
 ```json
 {
   "name": "opencode-gpt56-baseline",
-  "command": ["opencode", "run", "--model", "openai/gpt-5.6", "{task_content}"],
+  "command": ["opencode", "run", "--model", "openai/gpt-5.6", "--dir", "{workspace}", "{task_content}"],
   "setup": [],
   "env": {}
 }
@@ -125,7 +157,14 @@ Available placeholders in `command` and `setup`:
 - `{task_content}` - complete task Markdown content passed as one argument
 - `{workspace}` - isolated fixture workspace
 
-Commands execute with the workspace as their current directory.
+Commands execute with the workspace as their current directory. Each workspace
+is initialized as its own fresh git repository (baseline commit of the fixture)
+and `PWD` is set to it, so harness tooling roots itself inside the sandbox
+instead of an enclosing repository. If your harness has a working-directory
+flag, pass `{workspace}` through it — for example opencode variants use
+`--dir {workspace}` — because some harnesses otherwise bind to the repository
+the benchmark is launched from and edit real files instead of the isolated
+copy.
 
 ### Optional usage metrics
 
@@ -171,6 +210,15 @@ Build a balanced suite rather than scenarios optimized for a particular workflow
 Include tasks where extra skills should provide little value. Otherwise the benchmark will be biased toward proving that more orchestration is better.
 
 Prefer hidden deterministic tests as the primary correctness signal. A separate LLM/code-review verdict can be recorded later as a secondary qualitative metric, but should not replace executable evidence.
+
+The current suite includes:
+
+- `normalize-username` - a small mechanical input-normalization change for trimming, lowercasing, and rejecting empty usernames.
+- `deactivate-user` - a service/API domain change covering user persistence, idempotent deactivation, and unknown-user errors.
+- `fix-invoice-total` - a localized billing bug requiring integer-cent arithmetic and half-up discount rounding.
+- `session-expiry` - an investigation of deterministic idle-session expiry across datetime inputs.
+- `implement-sliding-window` - a rate-limiter feature following the existing fixed-window implementation while enforcing a rolling request limit.
+- `split-datetime-helpers` - a structural refactor splitting parsing and formatting helpers while preserving compatibility imports and behavior.
 
 ## Fair comparisons
 

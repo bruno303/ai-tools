@@ -1,0 +1,175 @@
+import json
+import os
+import shutil
+import sys
+import tempfile
+import time
+import unittest
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "benchmarks"))
+
+import benchmark
+
+
+class BenchmarkRunnerTests(unittest.TestCase):
+    def make_scenario(self, root, name, command, verification=None, hidden=False):
+        scenario_dir = root / name
+        fixture = scenario_dir / "fixture"
+        fixture.mkdir(parents=True)
+        (fixture / "tracked.txt").write_text("original", encoding="utf-8")
+        (scenario_dir / "task.md").write_text("task", encoding="utf-8")
+        if hidden:
+            (scenario_dir / "hidden.txt").write_text("hidden", encoding="utf-8")
+        scenario = {
+            "name": name,
+            "fixture": "fixture",
+            "task": "task.md",
+            "timeout_seconds": 10,
+            "verification": verification or [],
+        }
+        if hidden:
+            scenario["inject_after_run"] = [{"source": "hidden.txt", "destination": "hidden.txt"}]
+        path = scenario_dir / "scenario.json"
+        path.write_text(json.dumps(scenario), encoding="utf-8")
+        return path
+
+    def make_variant(self, root, name, command):
+        path = root / f"{name}.json"
+        path.write_text(json.dumps({"name": name, "command": command}), encoding="utf-8")
+        return path
+
+    def test_workspace_is_isolated_git_repo_with_correct_pwd(self):
+        if shutil.which("git") is None:
+            self.skipTest("git not available")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            code = (
+                "import os, subprocess, sys; "
+                "from pathlib import Path; "
+                f"assert os.environ['PWD'] == r'{{workspace}}', os.environ['PWD']; "
+                "assert os.getcwd() == r'{workspace}', os.getcwd(); "
+                "head = subprocess.run(['git', 'rev-parse', 'HEAD'], capture_output=True, text=True); "
+                "assert head.returncode == 0, head.stderr; "
+                "status = subprocess.run(['git', 'status', '--porcelain'], capture_output=True, text=True); "
+                "assert status.returncode == 0, status.stderr; "
+                f"assert status.stdout.strip() == '', status.stdout; "
+                "assert Path('tracked.txt').read_text() == 'original'"
+            )
+            scenario = self.make_scenario(root, "git-workspace", [])
+            variant = self.make_variant(root, "git-check", [sys.executable, "-c", code])
+            result = benchmark.execute_scenario(scenario, variant)
+
+            self.assertTrue(result["success"], result.get("failure_reason"))
+            self.assertEqual((scenario.parent / "fixture" / "tracked.txt").read_text(), "original")
+
+    def test_destructive_variant_does_not_modify_fixture_and_workspace_is_removed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            workspace_path = root / "workspace-path.txt"
+            code = (
+                "from pathlib import Path; "
+                f"w=Path(r'{workspace_path}'); w.write_text(r'{{workspace}}'); "
+                "p=Path(r'{workspace}')/'tracked.txt'; p.write_text('changed'); "
+                "(Path(r'{workspace}')/'created.txt').write_text('created')"
+            )
+            scenario = self.make_scenario(root, "isolated", [])
+            variant = self.make_variant(root, "destructive", [sys.executable, "-c", code])
+            result = benchmark.execute_scenario(scenario, variant)
+
+            self.assertTrue(result["success"])
+            self.assertEqual((scenario.parent / "fixture" / "tracked.txt").read_text(), "original")
+            self.assertFalse(Path(workspace_path.read_text()).exists())
+
+    def test_batch_results_are_unique_and_capture_hidden_test_timing(self):
+        with tempfile.TemporaryDirectory() as directory, tempfile.TemporaryDirectory() as results:
+            root = Path(directory)
+            verification = [
+                {
+                    "name": "hidden",
+                    "command": [sys.executable, "-c", "from pathlib import Path; assert Path('hidden.txt').exists()"],
+                }
+            ]
+            first = self.make_scenario(root, "first", [], verification, hidden=True)
+            second = self.make_scenario(root, "second", [], verification, hidden=True)
+            code = "from pathlib import Path; assert not Path('hidden.txt').exists()"
+            variant = self.make_variant(root, "fast", [sys.executable, "-c", code])
+
+            args = type("Args", (), {
+                "scenarios": [str(first), str(second), str(variant)],
+                "repeat": 2,
+                "keep_workspace": False,
+                "results_dir": results,
+                "verbose": False,
+                "quiet": True,
+            })()
+            self.assertEqual(benchmark.command_run(args), 0)
+            paths = sorted(Path(results).glob("*.json"))
+            self.assertEqual(len(paths), 4)
+            self.assertEqual(len({path.name for path in paths}), 4)
+            for path in paths:
+                result = json.loads(path.read_text(encoding="utf-8"))
+                self.assertTrue(result["success"])
+                self.assertIn(result["scenario"], {"first", "second"})
+                self.assertEqual(result["variant"], "fast")
+                self.assertIsNotNone(result["run"])
+                self.assertEqual(len(result["evaluations"]), 1)
+                self.assertIn("setup", result)
+                self.assertIn("duration_seconds", result)
+
+    def test_failure_result_has_failure_reason(self):
+        with tempfile.TemporaryDirectory() as directory, tempfile.TemporaryDirectory() as results:
+            root = Path(directory)
+            scenario = self.make_scenario(root, "failure", [])
+            variant = self.make_variant(root, "bad", [sys.executable, "-c", "raise SystemExit(3)"])
+            args = type("Args", (), {
+                "scenarios": [str(scenario), str(variant)],
+                "repeat": 1,
+                "keep_workspace": False,
+                "results_dir": results,
+                "verbose": False,
+                "quiet": True,
+            })()
+            self.assertEqual(benchmark.command_run(args), 1)
+            result = json.loads(next(Path(results).glob("*.json")).read_text(encoding="utf-8"))
+            self.assertFalse(result["success"])
+            self.assertEqual(result["failure_reason"], "run_or_verification_failed")
+
+    def test_leader_exit_does_not_wait_for_child_pipe_inheritor(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            child_pid_path = root / "child.pid"
+            child_code = "import time; time.sleep(30)"
+            code = (
+                "import subprocess; from pathlib import Path; "
+                f"child=subprocess.Popen([{sys.executable!r}, '-c', {child_code!r}]); "
+                f"Path(r'{child_pid_path}').write_text(str(child.pid)); "
+                "print('parent complete', flush=True)"
+            )
+            scenario = self.make_scenario(root, "pipe-inheritor", [])
+            variant = self.make_variant(root, "leader-exits", [sys.executable, "-c", code])
+
+            started = time.monotonic()
+            result = benchmark.execute_scenario(scenario, variant)
+            elapsed = time.monotonic() - started
+
+            self.assertTrue(result["success"])
+            self.assertEqual(result["run"]["exit_code"], 0)
+            self.assertFalse(result["run"]["timed_out"])
+            self.assertLess(elapsed, 5)
+            self.assertIn("parent complete", result["run"]["stdout"])
+
+            child_pid = int(child_pid_path.read_text(encoding="utf-8"))
+            for _ in range(20):
+                try:
+                    os.kill(child_pid, 0)
+                except ProcessLookupError:
+                    break
+                time.sleep(0.05)
+            else:
+                self.fail("inherited-pipe child was not terminated")
+
+
+if __name__ == "__main__":
+    unittest.main()

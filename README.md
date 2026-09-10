@@ -48,12 +48,13 @@ The benchmark runner compares coding-agent setups against the same isolated scen
 ```bash
 python3 benchmarks/benchmark.py run \
   benchmarks/scenarios/normalize-username/scenario.json \
+  benchmarks/scenarios/deactivate-user \
   benchmarks/variants/opencode.example.json
 ```
 
-Runs persist independent JSON results with success, verification output, and wall-clock time. Optional harness-exported token/call metrics are also preserved. Use `--repeat` for nondeterministic sampling and `benchmark.py compare` to aggregate success rate and median cost.
+Runs persist independent JSON results with success, verification output, and wall-clock time. Optional harness-exported token/call metrics are also preserved. Pass multiple scenario files or directories before the final variant path; use `--repeat` for nondeterministic sampling, `--verbose` for live agent output, `--quiet` to suppress heartbeats and streaming, and `--results-dir DIR` to redirect result files. Use `benchmark.py compare` to aggregate each scenario/variant pair, with optional `--scenario NAME` and `--variant NAME` filters.
 
-See `benchmarks/README.md` for scenario and variant authoring guidance.
+See `benchmarks/README.md` for the detailed runner, scenario, and variant guide.
 
 ## Installation
 
