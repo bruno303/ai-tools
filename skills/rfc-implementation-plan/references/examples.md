@@ -12,7 +12,7 @@ clients to continue working; §6 accepts read/write coverage. Keep it together:
 - **Objective:** Persist and expose optional `timezone` without breaking old clients.
 - **Repository area:** profile persistence, API serialization, migration, and focused tests.
 - **Expected changes/scope:** Add the nullable field, compatible serialization, migration, and focused tests.
-- **Expected writable outputs:**
+- **Known files/artifacts:**
   - `profiles/model.py` (modified)
   - `profiles/serializers.py` (modified)
   - `profiles/migrations/0004_add_timezone.py` (created)
@@ -31,7 +31,7 @@ RFC §3 chooses a token issuer; §5 requires existing tokens to remain valid;
 - **Objective:** Implement the RFC §3 issuer abstraction and compatibility rules from §5.
 - **Repository area:** issuer implementation, token configuration, and auth unit tests.
 - **Expected changes/scope:** Add implementation, configuration, and contract tests.
-- **Expected writable outputs:**
+- **Known files/artifacts:**
   - `auth/issuer.py` (created)
   - `auth/config.py` (modified)
   - `auth/tests/test_issuer.py` (created)
@@ -42,7 +42,7 @@ RFC §3 chooses a token issuer; §5 requires existing tokens to remain valid;
 - **Objective:** Use the issuer at login and emit the §7 success/failure metrics.
 - **Repository area:** login endpoint, authentication integration tests, and metrics module.
 - **Expected changes/scope:** Connect Task 1, preserve response contract, and test instrumentation.
-- **Expected writable outputs:**
+- **Known files/artifacts:**
   - `auth/login.py` (modified)
   - `auth/metrics.py` (modified)
   - `auth/tests/test_login_integration.py` (modified)
@@ -60,7 +60,7 @@ adapter. After the schema contract is settled, these scopes do not overlap:
 - **Objective:** Publish the RFC §4 event contract and fixtures.
 - **Repository area:** event schema package and schema contract tests.
 - **Expected changes/scope:** Schema, version fixture, and compatibility validation.
-- **Expected writable outputs:**
+- **Known files/artifacts:**
   - `events/schema.py` (created)
   - `events/fixtures/v2.json` (created)
   - `events/tests/test_schema_contract.py` (created)
@@ -71,7 +71,7 @@ adapter. After the schema contract is settled, these scopes do not overlap:
 - **Objective:** Implement the §8 operational dashboard from the event stream.
 - **Repository area:** dashboard configuration and dashboard validation tests.
 - **Expected changes/scope:** Queries, panels, alerts, and dashboard validation.
-- **Expected writable outputs:**
+- **Known files/artifacts:**
   - `ops/dashboard/events.json` (created)
   - `ops/dashboard/tests/test_events_dashboard.py` (created)
 - **Dependencies:** Task 1
@@ -81,16 +81,16 @@ adapter. After the schema contract is settled, these scopes do not overlap:
 - **Objective:** Implement the §8 consumer adapter using the Task 1 schema.
 - **Repository area:** client adapter package and adapter tests.
 - **Expected changes/scope:** Mapping, retries required by RFC §6, and contract tests.
-- **Expected writable outputs:**
+- **Known files/artifacts:**
   - `clients/adapter/client.py` (created)
   - `clients/adapter/tests/test_client.py` (created)
 - **Dependencies:** Task 1
 - **Validation:** adapter integration and retry tests.
 ```
 
-Tasks 2 and 3 may run in isolated worktrees in parallel: neither depends on
-the other and their repository scopes do not conflict. The execution workflow
-owns that dispatch decision.
+Tasks 2 and 3 are parallel-safe after Task 1: neither depends on the other and
+their repository scopes do not conflict. Whether to use worktrees or parallel
+workers belongs to the selected execution workflow.
 
 ## Material unresolved detail: concise clarification
 
