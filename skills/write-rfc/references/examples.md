@@ -12,10 +12,9 @@ These examples illustrate the workflow and scale, not domain-specific designs.
 contract. **Non-goal:** redesign the operation or its storage.
 
 **Evidence:** The issue's “Retry behavior” section states that retry is
-user-visible (**source fact**, `retry-issue.md`, “Retry behavior”); nearby
-commands already expose a bounded retry setting (**repository evidence**,
-`cmd/sync.go`, `RunSync`). It is therefore a **technical inference** that the
-feature should reuse the existing setting.
+user-visible (`retry-issue.md`, “Retry behavior”). Nearby commands already
+expose a bounded retry setting (`cmd/sync.go`, `RunSync`), so reusing that
+policy is consistent with the current repository.
 
 **Proposal:** Add the retry affordance at the existing command boundary, use
 the established bounded policy, and report the final error unchanged. Verify
@@ -33,17 +32,16 @@ decisions remain.
 deployed components.
 
 **Context and evidence:** The “Compatibility” section of the requirements
-identifies the capability and its compatibility goal (**source facts**,
-`capability-prd.md`, “Compatibility”). Repository guidance requires versioned
-interfaces (**repository evidence**, `AGENTS.md`, “API conventions”). The need
-for an adapter at each existing boundary is a **technical inference**.
+identifies the capability and its compatibility goal
+(`capability-prd.md`, “Compatibility”). Repository guidance requires versioned
+interfaces (`AGENTS.md`, “API conventions”). Based on those constraints, the
+proposal uses an adapter at each existing boundary.
 
 **Design:** Define a versioned interface, keep component-specific adapters at
 the integration boundaries, and make the shared service stateless. Describe
 the request flow, timeout and retry behavior, error contract, ownership,
 authentication, and telemetry. Compare a shared service with a library and a
-central queue; choose the service because independent deployment is a goal
-(**proposed decision**).
+central queue; choose the service because independent deployment is a goal.
 
 **Reliability and rollout:** Set an explicit timeout, bound retries, make
 operations idempotent where retries can duplicate work, and use a compatibility
@@ -62,16 +60,18 @@ documented rollback trigger.
 **Status: DRAFT RFC — blocked on product decisions**
 
 **Known:** The “Existing users” section of the PRD requires the behavior for
-existing users (**source fact**, `behavior-prd.md`, “Existing users”). The issue
-says the operation is asynchronous (**source fact**, `behavior-issue.md`,
-“Completion”), but the supporting note says callers must receive the final
-result immediately (**contradiction**, `caller-note.md`, “Response timing”).
-Existing interfaces provide no precedent (**repository evidence**,
-`internal/operations.go`, `OperationClient`).
+existing users (`behavior-prd.md`, “Existing users”). The issue says the
+operation is asynchronous (`behavior-issue.md`, “Completion”), while the
+supporting note says callers must receive the final result immediately
+(`caller-note.md`, “Response timing”). Existing interfaces provide no precedent
+(`internal/operations.go`, `OperationClient`).
 
-**Safe inference:** Preserve the current authentication and error conventions
-because the repository uses them consistently (**technical inference**, also
-recorded as an **assumption** until confirmed).
+**Contradiction:** The asynchronous completion requirement and immediate final
+response requirement cannot both define the public contract.
+
+**Assumption:** Preserve the current authentication and error conventions
+because the repository uses them consistently. This assumption does not resolve
+the response-timing contradiction.
 
 **Batched questions:**
 
