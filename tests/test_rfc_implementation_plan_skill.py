@@ -12,6 +12,7 @@ class RfcImplementationPlanSkillContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.skill_text = SKILL.read_text(encoding="utf-8")
+        cls.normalized_skill_text = re.sub(r"\s+", " ", cls.skill_text)
         cls.examples_text = EXAMPLES.read_text(encoding="utf-8")
 
     def test_skill_and_frontmatter_exist(self):
@@ -70,7 +71,7 @@ class RfcImplementationPlanSkillContractTests(unittest.TestCase):
             self.skill_text,
             r"(?i)pre-dispatch normalization step owns the exact writable path allowlist",
         )
-        self.assertRegex(self.skill_text, r"(?i)do not guess filenames")
+        self.assertRegex(self.normalized_skill_text, r"(?i)do not guess filenames")
         self.assertNotIn("Expected writable outputs", self.skill_text)
 
 
