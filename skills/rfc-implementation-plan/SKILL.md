@@ -12,8 +12,10 @@ to be translated into an implementation-ready plan. It is a bridge between a
 design decision and the execution workflow.
 
 Do not use it to draft, redesign, or approve an RFC; to make a general plan
-when no RFC exists; or to execute an already-written plan. Use the execution
-workflow (`subagent-plan-execution`) after this plan is approved.
+when no RFC exists; or to execute an already-written plan. This skill stops
+after producing the plan. The plan should work with the harness's normal
+implementation flow and remain compatible with `subagent-plan-execution` when
+that heavier workflow is explicitly invoked.
 
 ## Evidence and RFC extraction
 
@@ -68,19 +70,22 @@ file-level microtasks.
 
 Record dependencies explicitly. Default to serial execution. Mark tasks
 parallel-safe only when there is no dependency path and no conflicting
-repository scope. Worktrees and dispatch belong to
-`subagent-plan-execution`, not this skill.
+repository scope. Worktrees and dispatch are execution concerns, not
+responsibilities of this skill.
 
 Every task must have an objective, repository area, expected changes/scope,
-an **Expected writable outputs** field, dependencies, and task-level validation.
-The expected writable outputs field must enumerate every exact path the task may
-create or modify and every intentional delete or rename,
-with the operation declared explicitly (`created`, `modified`, `deleted`, or
-`renamed`). Do not use a broad repository area or unresolved descriptions such
-as “profile handler” or “metrics registration” as a substitute. This complete
-path/operation list is the worker's allowlist and must be settled before
-dispatch; the execution workflow must not need another planning pass to infer
-it. Include final integration validation for the complete change.
+dependencies, and task-level validation. List known files and expected new,
+deleted, or renamed artifacts when repository inspection identifies them with
+confidence, but do not require an exhaustive exact-path allowlist and do not
+guess filenames just to make the plan look concrete. Describe remaining scope
+using modules, directories, interfaces, or boundaries.
+
+If `subagent-plan-execution` is explicitly invoked later, its existing
+pre-dispatch normalization step owns the exact writable path allowlist and may
+resolve clearly necessary supporting paths from this plan. That is execution
+preparation, not another design/planning pass.
+
+Include final integration validation for the complete change.
 
 ## Output
 
@@ -103,9 +108,8 @@ Produce a concise, writable plan with this shape:
 ### Task 1: <cohesive outcome>
 - **Objective:** <observable result>
 - **Repository area:** <paths/modules and boundaries>
-- **Expected changes/scope:** <implementation and tests in writable scope>
-- **Expected writable outputs:**
-  - `<exact/path>` (created|modified|deleted|renamed; for a rename, include the old and new paths)
+- **Expected changes/scope:** <implementation behavior, interfaces, and tests>
+- **Known files/artifacts:** <known paths and operations when confidently identified; otherwise omit>
 - **Dependencies:** <none or task IDs>
 - **Validation:** <focused checks and acceptance criteria>
 
@@ -117,8 +121,9 @@ Produce a concise, writable plan with this shape:
 ```
 
 The plan must contain enough concrete repository scope and acceptance-oriented
-validation for `subagent-plan-execution` to dispatch tasks without another
-planning pass. See [references/examples.md](references/examples.md).
+validation to start implementation without another design pass. Exact worker
+allowlists, worktrees, and dispatch details remain execution concerns. See
+[references/examples.md](references/examples.md).
 
 ## Boundaries
 
