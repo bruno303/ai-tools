@@ -21,13 +21,16 @@ planning or as a request to start coding.
 2. Before asking questions, inspect repository guidance (`AGENTS.md`,
    `CLAUDE.md`, and equivalent), analogous features, interfaces, tests, and
    configuration. Prefer repository evidence to guesses.
-3. Label claims as **source fact**, **repository evidence**, **technical inference**,
-   **proposed decision**, **assumption**, **contradiction**, or **unresolved question**.
-   Keep those categories visibly distinct. Every material source fact and piece of
-   repository evidence must cite an identifiable origin: the document
-   title/path plus section, or the repository file plus symbol.
-4. Ask only about material decisions that cannot safely be inferred. Batch independent questions
-   into one small, prioritized set; do not ask for
+3. Distinguish source facts, repository evidence, technical inferences, proposed
+   decisions, assumptions, contradictions, and unresolved questions while
+   reasoning about the design. Do not mechanically label every sentence in the
+   RFC. Keep assumptions, contradictions, and unresolved decisions visibly
+   separate when they materially affect the proposal. Cite every material source
+   fact and piece of repository evidence using an identifiable origin: the
+   document or repository path plus the most specific useful location available,
+   such as a section, heading, symbol, or line/range.
+4. Ask only about material decisions that cannot safely be inferred. Batch
+   independent questions into one small, prioritized set; do not ask for
    confirmation of established conventions.
 5. If a critical decision remains unresolved, publish a clearly marked
    **DRAFT RFC**. Identify the decision, its impact, and the smallest question
@@ -40,7 +43,7 @@ small feature may need a brief proposal and test notes, while a broad feature
 needs explicit boundaries and failure analysis. Draw from this flexible pool:
 
 - status, summary, problem, goals, and non-goals
-- context and evidence (including source/claim classifications)
+- context and evidence
 - requirements, constraints, assumptions, and open questions
 - proposed design, components, interactions, and data flow
 - interfaces and contracts (API, events, storage, or user-visible behavior)
