@@ -13,6 +13,7 @@ class WriteRfcSkillContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.skill = SKILL.read_text(encoding="utf-8")
+        cls.normalized_skill = re.sub(r"\s+", " ", cls.skill)
         cls.examples = EXAMPLES.read_text(encoding="utf-8")
         cls.readme = README.read_text(encoding="utf-8")
 
@@ -40,7 +41,7 @@ class WriteRfcSkillContractTests(unittest.TestCase):
             "contradictions",
             "unresolved questions",
         ):
-            self.assertIn(concept, self.skill)
+            self.assertIn(concept, self.normalized_skill)
         self.assertRegex(self.skill, r"(?i)do not mechanically label every sentence")
 
     def test_material_claims_require_flexible_identifiable_attribution(self):
@@ -61,7 +62,7 @@ class WriteRfcSkillContractTests(unittest.TestCase):
 
     def test_clarification_and_draft_behavior_are_explicit(self):
         self.assertRegex(self.skill, r"(?i)only.*material decisions")
-        self.assertRegex(self.skill, r"(?i)batch.*independent.*questions")
+        self.assertRegex(self.normalized_skill, r"(?i)batch.*independent.*questions")
         self.assertIn("DRAFT RFC", self.skill)
         self.assertRegex(self.skill, r"(?i)critical decision.*unresolved")
 
