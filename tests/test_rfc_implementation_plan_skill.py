@@ -20,7 +20,7 @@ class RfcImplementationPlanSkillContractTests(unittest.TestCase):
         self.assertRegex(self.skill_text, r"description:\s*.+\n---")
 
     def test_trigger_and_scope_boundaries(self):
-        for phrase in ("approved", "mostly final", "draft", "redesign", "subagent-plan-execution"):
+        for phrase in ("approved", "mostly final", "draft", "redesign", "subagent-plan-execution", "explicitly invoked"):
             self.assertIn(phrase, self.skill_text.lower())
         for phrase in ("must not implement", "run tests", "code review", "worktrees", "dispatch subagents"):
             self.assertIn(phrase, self.skill_text.lower())
@@ -34,7 +34,7 @@ class RfcImplementationPlanSkillContractTests(unittest.TestCase):
             "operational", "RFC-settled", "repository-derived detail",
             "contradiction", "implementation-critical decision", "cohesive outcome",
             "parallel-safe", "task-level validation", "Final integration and validation",
-            "Expected writable outputs", "exact path", "created", "modified", "deleted", "renamed",
+            "Known files/artifacts", "exact-path allowlist", "pre-dispatch normalization",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase.lower(), self.skill_text.lower())
@@ -43,7 +43,7 @@ class RfcImplementationPlanSkillContractTests(unittest.TestCase):
             self.assertRegex(self.skill_text, rf"##[^\n]*{re.escape(section)}")
         for field in (
             "Objective", "Repository area", "Expected changes/scope",
-            "Expected writable outputs", "Dependencies", "Validation",
+            "Known files/artifacts", "Dependencies", "Validation",
         ):
             self.assertIn(f"**{field}:**", self.skill_text)
 
@@ -58,9 +58,20 @@ class RfcImplementationPlanSkillContractTests(unittest.TestCase):
         task_blocks = [block for block in task_blocks if block.startswith("### Task ")]
         self.assertEqual(len(task_blocks), 6)
         for block in task_blocks:
-            self.assertIn("**Expected writable outputs:**", block)
-            outputs = re.findall(r"^  - `[^`]+` \((created|modified|deleted|renamed)\)$", block, re.MULTILINE)
-            self.assertGreaterEqual(len(outputs), 1)
+            self.assertIn("**Known files/artifacts:**", block)
+            self.assertNotIn("**Expected writable outputs:**", block)
+
+    def test_exact_worker_allowlist_is_left_to_execution(self):
+        self.assertRegex(
+            self.skill_text,
+            r"(?i)do not require an exhaustive exact-path allowlist",
+        )
+        self.assertRegex(
+            self.skill_text,
+            r"(?i)pre-dispatch normalization step owns the exact writable path allowlist",
+        )
+        self.assertRegex(self.skill_text, r"(?i)do not guess filenames")
+        self.assertNotIn("Expected writable outputs", self.skill_text)
 
 
 if __name__ == "__main__":
