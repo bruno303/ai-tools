@@ -28,23 +28,36 @@ class WriteRfcSkillContractTests(unittest.TestCase):
         self.assertLess(analysis, rfc)
         self.assertLess(rfc, planning)
 
-    def test_workflow_is_repository_first_and_classifies_claims(self):
+    def test_workflow_is_repository_first_without_audit_style_labels(self):
         self.assertRegex(self.skill, r"(?i)read.*PRD|PRD.*supporting")
         self.assertRegex(self.skill, r"(?i)repository guidance")
-        for label in ("source fact", "repository evidence", "technical inference",
-                      "proposed decision", "assumption", "contradiction",
-                      "unresolved question"):
-            self.assertIn(label, self.skill)
+        for concept in (
+            "source facts",
+            "repository evidence",
+            "technical inferences",
+            "proposed decisions",
+            "assumptions",
+            "contradictions",
+            "unresolved questions",
+        ):
+            self.assertIn(concept, self.skill)
+        self.assertRegex(self.skill, r"(?i)do not mechanically label every sentence")
 
-    def test_material_claims_require_identifiable_source_attribution(self):
-        self.assertRegex(self.skill, r"(?i)material.*source fact")
-        self.assertRegex(self.skill, r"(?i)repository evidence.*cite")
-        self.assertRegex(self.skill, r"(?i)document\s+title/path\s+plus\s+section")
-        self.assertRegex(self.skill, r"(?i)repository file\s+plus\s+symbol")
-        self.assertIn("source fact", self.examples)
-        self.assertIn("repository evidence", self.examples)
-        self.assertIn("section", self.examples)
+    def test_material_claims_require_flexible_identifiable_attribution(self):
+        self.assertRegex(self.skill, r"(?i)cite every material source")
+        self.assertRegex(self.skill, r"(?i)document or repository path")
+        for locator in ("section", "heading", "symbol", "line/range"):
+            self.assertIn(locator, self.skill)
+        self.assertIn("`retry-issue.md`, “Retry behavior”", self.examples)
         self.assertIn("`cmd/sync.go`, `RunSync`", self.examples)
+
+    def test_material_uncertainty_is_visibly_separated(self):
+        self.assertRegex(
+            self.skill,
+            r"(?i)assumptions, contradictions, and unresolved decisions visibly",
+        )
+        self.assertIn("**Contradiction:**", self.examples)
+        self.assertIn("**Assumption:**", self.examples)
 
     def test_clarification_and_draft_behavior_are_explicit(self):
         self.assertRegex(self.skill, r"(?i)only.*material decisions")
@@ -55,21 +68,28 @@ class WriteRfcSkillContractTests(unittest.TestCase):
     def test_output_scales_and_stays_out_of_implementation_planning(self):
         self.assertRegex(self.skill, r"(?i)scale.*complexity")
         self.assertIn("flexible pool", self.skill)
-        for term in ("file-by-file implementation", "task batches", "executor assignments",
-                     "worktrees", "estimates", "coding schedules"):
+        for term in (
+            "file-by-file implementation",
+            "task batches",
+            "executor assignments",
+            "worktrees",
+            "estimates",
+            "coding schedules",
+        ):
             self.assertIn(term, self.skill)
 
     def test_section_pool_covers_separate_design_and_delivery_risks(self):
         self.assertRegex(self.skill, r"(?i)design risks and delivery risks")
-        self.assertIn("design risks", self.skill)
-        self.assertIn("delivery risks", self.skill)
         self.assertIn("separate when relevant", self.skill)
         self.assertRegex(self.examples, r"(?i)Design risks")
         self.assertRegex(self.examples, r"(?i)Delivery risks")
 
     def test_examples_reference_guidance_for_scale_and_decisions(self):
         self.assertIn("references/examples.md", self.skill)
-        self.assertRegex(self.skill, r"(?is)RFC scale,.{0,80}architectural decisions,.{0,80}conflicting sources")
+        self.assertRegex(
+            self.skill,
+            r"(?is)RFC scale,.{0,80}architectural decisions,.{0,80}conflicting sources",
+        )
 
     def test_examples_cover_small_large_and_incomplete_sources(self):
         for heading in ("Small feature", "Larger feature", "Incomplete or conflicting"):
