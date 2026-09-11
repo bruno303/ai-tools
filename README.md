@@ -25,6 +25,7 @@ Model assignments are native to each harness: OpenCode uses `opencode/gpt-5.6-lu
 ## Skills
 
 - **`skills/analyze-codebase/SKILL.md`** - map relevant files, call flow, boundaries, and patterns before edits.
+- **`skills/write-rfc/SKILL.md`** - turn requirements and repository evidence into a proportional RFC, clarifying only material decisions before planning.
 - **`skills/plan-implementation/SKILL.md`** - create a concrete implementation plan, including risks and test strategy.
 - **`skills/rfc-implementation-plan/SKILL.md`** - turn an approved or mostly-final RFC into an implementation-ready, repository-grounded plan compatible with normal harness implementation and, when explicitly invoked, `subagent-plan-execution`.
 - **`skills/write-tests/SKILL.md`** - add or update behavior-focused tests at the right level.
