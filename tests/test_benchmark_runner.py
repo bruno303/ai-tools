@@ -1,4 +1,6 @@
 import json
+import contextlib
+import io
 import os
 import shutil
 import sys
@@ -11,9 +13,47 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "benchmarks"))
 
 import benchmark
+import opencode_usage
 
 
 class BenchmarkRunnerTests(unittest.TestCase):
+    def test_opencode_usage_aggregates_known_model_events_and_ignores_unknown(self):
+        usage = opencode_usage.parse_usage([
+            {"type": "step_finish", "part": {"type": "step-finish", "tokens": {"input": 10, "output": 4, "cache": {"read": 6}}, "cost": 0.25}},
+            {"type": "tool_use", "part": {"type": "tool", "tool": "task", "new_field": True}},
+            {"type": "future-event", "part": {"tokens": {"input": 999}, "cost": 99}},
+            {"type": "step-finish-extra", "part": {"tokens": {"input": 999}, "cost": 99}},
+        ])
+        self.assertEqual(usage["input_tokens"], 10)
+        self.assertEqual(usage["cached_input_tokens"], 6)
+        self.assertEqual(usage["output_tokens"], 4)
+        self.assertEqual(usage["model_calls"], 1)
+        self.assertEqual(usage["subagent_calls"], 1)
+        self.assertEqual(usage["cost"], 0.25)
+
+    def test_opencode_wrapper_preserves_failure_and_writes_usage_atomically(self):
+        with tempfile.TemporaryDirectory() as directory:
+            usage_file = Path(directory) / ".benchmark-usage.json"
+            command = [sys.executable, "-c", "import json; print(json.dumps({'type':'step_finish','part':{'type':'step-finish','tokens':{'input':2}}})); raise SystemExit(7)"]
+            self.assertEqual(opencode_usage.main(["--usage-file", str(usage_file), "--", *command]), 7)
+            self.assertEqual(json.loads(usage_file.read_text())["input_tokens"], 2)
+
+    def test_rendered_opencode_variant_runs_from_workspace(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            scenario = self.make_scenario(root, "rendered", [])
+            variant = ROOT / "benchmarks" / "variants" / "opencode.example.json"
+            workspace = root / "workspace"
+            workspace.mkdir()
+            task = root / "task.md"
+            task.write_text("task", encoding="utf-8")
+            command = benchmark.render_command(benchmark.load_json(variant)["command"], task, workspace)
+            self.assertEqual(Path(command[1]), ROOT / "benchmarks" / "opencode_usage.py")
+            separator = command.index("--")
+            command[separator + 1:] = [sys.executable, "-c", "import json; print(json.dumps({'type':'step_finish','part':{'type':'step-finish','tokens':{'input':3}}}))"]
+            completed = benchmark.run_command(command, workspace, os.environ.copy(), 10, quiet=True)
+            self.assertEqual(completed["exit_code"], 0)
+            self.assertEqual(json.loads((workspace / ".benchmark-usage.json").read_text())["input_tokens"], 3)
     def make_scenario(self, root, name, command, verification=None, hidden=False):
         scenario_dir = root / name
         fixture = scenario_dir / "fixture"
@@ -169,6 +209,74 @@ class BenchmarkRunnerTests(unittest.TestCase):
                 time.sleep(0.05)
             else:
                 self.fail("inherited-pipe child was not terminated")
+
+    def test_compare_since_is_inclusive_and_handles_timezones(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            results = []
+            for name, started_at in (
+                ("before", "2024-01-01T11:59:59+00:00"),
+                ("at", "2024-01-01T12:00:00+00:00"),
+                ("offset", "2024-01-01T13:00:00+01:00"),
+            ):
+                path = root / f"{name}.json"
+                path.write_text(
+                    json.dumps(
+                        {
+                            "scenario": "scenario",
+                            "variant": name,
+                            "started_at": started_at,
+                            "success": True,
+                            "duration_seconds": 1,
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+                results.append(str(path))
+
+            args = type("Args", (), {
+                "results": results,
+                "scenario": None,
+                "variant": None,
+                "since": benchmark.parse_timestamp("2024-01-01T12:00:00-00:00"),
+            })()
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(benchmark.command_compare(args), 0)
+            self.assertIn("| scenario | at | 1 |", output.getvalue())
+            self.assertIn("| scenario | offset | 1 |", output.getvalue())
+            self.assertNotIn("| scenario | before |", output.getvalue())
+
+    def test_compare_since_composes_with_scenario_and_variant_filters(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            paths = []
+            for index, (scenario, variant) in enumerate((("keep", "target"), ("keep", "other"), ("skip", "target"))):
+                path = root / f"{index}.json"
+                path.write_text(json.dumps({
+                    "scenario": scenario,
+                    "variant": variant,
+                    "started_at": "2024-01-02T00:00:00Z",
+                    "success": True,
+                    "duration_seconds": 1,
+                }), encoding="utf-8")
+                paths.append(str(path))
+            args = type("Args", (), {
+                "results": paths,
+                "scenario": "keep",
+                "variant": "target",
+                "since": benchmark.parse_timestamp("2024-01-01T00:00:00Z"),
+            })()
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                benchmark.command_compare(args)
+            self.assertIn("| keep | target | 1 |", output.getvalue())
+            self.assertNotIn("other", output.getvalue())
+            self.assertNotIn("skip", output.getvalue())
+
+    def test_compare_since_rejects_invalid_timestamp(self):
+        with self.assertRaises(Exception):
+            benchmark.parse_timestamp("not-a-timestamp")
 
 
 if __name__ == "__main__":

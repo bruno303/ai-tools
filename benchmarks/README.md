@@ -87,7 +87,14 @@ python3 benchmarks/benchmark.py compare benchmarks/results/*.json
 
 The comparison prints a Markdown table with scenario, variant, run count,
 success rate, median wall-clock time, and median input tokens when available.
-Use `--scenario NAME` and/or `--variant NAME` for exact-match filters.
+Use `--scenario NAME` and/or `--variant NAME` for exact-match filters. Use
+`--since TIMESTAMP` to include only results whose `started_at` is at or after
+an ISO-8601 timestamp (including its timezone):
+
+```bash
+python3 benchmarks/benchmark.py compare benchmarks/results/*.json \
+  --since 2026-09-10T12:00:00Z
+```
 
 Each execution prints a header with its progress, scenario, variant, repeat
 number, and timeout, followed by a PASS/FAIL summary and result path. While a
@@ -95,8 +102,10 @@ number, and timeout, followed by a PASS/FAIL summary and result path. While a
  heartbeat about every 15 seconds with elapsed time and timeout. Pass
  `--verbose` to stream captured stdout and stderr live with stream prefixes, or
  `--quiet` to suppress heartbeats and streaming while keeping the header and
- final summary. Use `--repeat N` for
-repeated executions, `--keep-workspace` to retain the temporary workspace,
+final summary. Use `--repeat N` for repeated executions. Prefer `--repeat 3`
+to `--repeat 5` for a practical estimate of nondeterministic performance; use
+more only when the decision warrants the additional cost. Use
+`--keep-workspace` to retain the temporary workspace,
 and `--results-dir DIR` to write result JSON files somewhere other than the
 default `benchmarks/results/` directory.
 
@@ -193,6 +202,26 @@ A useful usage payload is:
 ```
 
 Usage collection is optional because different harnesses expose telemetry differently.
+
+Treat usage metrics as cost signals alongside success rate and duration. The
+runner reports median `input_tokens` in `compare`; raw result JSON also
+preserves `cached_input_tokens`, `output_tokens`, `model_calls`,
+`subagent_calls`, and other exported fields when present.
+
+### OpenCode security
+
+The example OpenCode variants pass `--auto`, which approves tool actions
+automatically. Run them only in the benchmark's disposable isolated
+workspace, and review the command, model, setup, and environment before using
+a local variant. Do not use `--auto` with untrusted tasks or a workspace
+containing secrets.
+
+### Result hygiene
+
+Result files are local artifacts. If a result JSON is invalid or incomplete,
+remove it from the glob or move it to a quarantine directory before running
+`compare`; do not treat it as benchmark data. Invalid result JSONs are ignored
+local artifacts and are not currently tracked in this repository.
 
 ## Designing scenarios
 
