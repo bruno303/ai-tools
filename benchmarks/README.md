@@ -152,7 +152,7 @@ Prefer argument arrays. Commands are executed directly without a shell:
 ```json
 {
   "name": "opencode-gpt56-baseline",
-  "command": ["opencode", "run", "--model", "openai/gpt-5.6", "--dir", "{workspace}", "{task_content}"],
+  "command": ["opencode2", "run", "--model", "openai/gpt-5.6", "{task_content}"],
   "setup": [],
   "env": {}
 }
@@ -170,10 +170,9 @@ Commands execute with the workspace as their current directory. Each workspace
 is initialized as its own fresh git repository (baseline commit of the fixture)
 and `PWD` is set to it, so harness tooling roots itself inside the sandbox
 instead of an enclosing repository. If your harness has a working-directory
-flag, pass `{workspace}` through it — for example opencode variants use
-`--dir {workspace}` — because some harnesses otherwise bind to the repository
-the benchmark is launched from and edit real files instead of the isolated
-copy.
+flag, use it when necessary for that harness. The benchmark runner already
+starts each command in the isolated workspace, and the OpenCode 2 variants
+inherit that working directory directly.
 
 ### Optional usage metrics
 
