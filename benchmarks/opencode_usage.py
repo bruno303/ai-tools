@@ -6,9 +6,9 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import secrets
 import subprocess
 import sys
-import tempfile
 import threading
 from pathlib import Path
 from typing import Any, Iterable, TextIO
@@ -71,21 +71,85 @@ def aggregate_usage(events: Iterable[dict[str, Any]]) -> dict[str, int | float]:
     return parse_usage(events)
 
 
-def write_usage(path: Path, usage: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+def write_usage(root_fd: int, components: tuple[str, ...], usage: dict[str, Any]) -> None:
+    """Atomically write usage relative to an already-open invocation directory."""
+    if not components:
+        raise ValueError("usage file must name a file")
+
+    # The caller owns root_fd and keeps it open across the subprocess.
+    directory_fds: list[int] = []
+    parent_fd = root_fd
     try:
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            json.dump(usage, handle, indent=2)
-            handle.write("\n")
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(temporary, path)
-    finally:
+        for component in components[:-1]:
+            while True:
+                try:
+                    child_fd = os.open(
+                        component,
+                        os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+                        dir_fd=parent_fd,
+                    )
+                    break
+                except FileNotFoundError:
+                    try:
+                        os.mkdir(component, dir_fd=parent_fd)
+                    except FileExistsError:
+                        continue
+            directory_fds.append(child_fd)
+            parent_fd = child_fd
+
+        filename = components[-1]
+        temporary = None
+        fd = None
+        for _ in range(100):
+            temporary = f".{filename}.{os.getpid()}.{secrets.token_hex(8)}"
+            try:
+                fd = os.open(
+                    temporary,
+                    os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                    0o600,
+                    dir_fd=parent_fd,
+                )
+                break
+            except FileExistsError:
+                continue
+        if fd is None or temporary is None:
+            raise FileExistsError("could not create a temporary usage file")
+
+        temporary_path = temporary
+        assert fd is not None
         try:
-            os.unlink(temporary)
-        except FileNotFoundError:
-            pass
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                fd = None
+                json.dump(usage, handle, indent=2)
+                handle.write("\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary_path, filename, src_dir_fd=parent_fd, dst_dir_fd=parent_fd)
+        finally:
+            if fd is not None:
+                os.close(fd)
+            try:
+                os.unlink(temporary_path, dir_fd=parent_fd)
+            except FileNotFoundError:
+                pass
+    finally:
+        for directory_fd in reversed(directory_fds):
+            os.close(directory_fd)
+
+
+def _validate_usage_path(value: str, allowed_directory: Path | None = None) -> Path:
+    """Return a usage path constrained to the invocation directory."""
+    path = Path(value)
+    if path.is_absolute() or ".." in path.parts:
+        raise ValueError("usage file must be a relative path without parent traversal")
+
+    directory = (allowed_directory or Path.cwd()).resolve()
+    candidate = (directory / path).resolve(strict=False)
+    try:
+        candidate.relative_to(directory)
+    except ValueError as error:
+        raise ValueError("usage file must remain within the invocation directory") from error
+    return candidate
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -101,6 +165,18 @@ def main(argv: list[str] | None = None) -> int:
     if command[:2] == ["opencode", "run"] and "--format" not in command:
         command[2:2] = ["--format", "json"]
 
+    # Open the directory while it is still the invocation directory.  Keeping
+    # this descriptor across the child process prevents a child from replacing
+    # the cwd pathname before usage is written.
+    invocation_fd = os.open(".", os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC)
+    invocation_directory = Path.cwd().resolve()
+    try:
+        usage_path = _validate_usage_path(args.usage_file, invocation_directory)
+        usage_components = usage_path.relative_to(invocation_directory).parts
+    except ValueError as error:
+        os.close(invocation_fd)
+        parser.error(str(error))
+
     try:
         process = subprocess.Popen(
             command,
@@ -111,7 +187,10 @@ def main(argv: list[str] | None = None) -> int:
         )
     except OSError as error:
         print(f"opencode wrapper: {error}", file=sys.stderr)
-        write_usage(Path(args.usage_file), parse_usage([]))
+        try:
+            write_usage(invocation_fd, usage_components, parse_usage([]))
+        finally:
+            os.close(invocation_fd)
         return 127
 
     events: list[dict[str, Any]] = []
@@ -144,7 +223,10 @@ def main(argv: list[str] | None = None) -> int:
     process.stdout.close()
     process.stderr.close()
 
-    write_usage(Path(args.usage_file), parse_usage(events))
+    try:
+        write_usage(invocation_fd, usage_components, parse_usage(events))
+    finally:
+        os.close(invocation_fd)
     return returncode
 
 

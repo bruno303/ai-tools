@@ -7,6 +7,7 @@ import sys
 import tempfile
 import time
 import unittest
+import unittest.mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -33,10 +34,76 @@ class BenchmarkRunnerTests(unittest.TestCase):
 
     def test_opencode_wrapper_preserves_failure_and_writes_usage_atomically(self):
         with tempfile.TemporaryDirectory() as directory:
-            usage_file = Path(directory) / ".benchmark-usage.json"
             command = [sys.executable, "-c", "import json; print(json.dumps({'type':'step_finish','part':{'type':'step-finish','tokens':{'input':2}}})); raise SystemExit(7)"]
-            self.assertEqual(opencode_usage.main(["--usage-file", str(usage_file), "--", *command]), 7)
-            self.assertEqual(json.loads(usage_file.read_text())["input_tokens"], 2)
+            with contextlib.chdir(directory):
+                self.assertEqual(opencode_usage.main(["--", *command]), 7)
+                self.assertEqual(json.loads(Path(".benchmark-usage.json").read_text())["input_tokens"], 2)
+
+    def test_opencode_wrapper_accepts_nested_usage_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            command = [sys.executable, "-c", "import json; print(json.dumps({'type':'step_finish','part':{'tokens':{'input':2}}}))"]
+            with contextlib.chdir(directory):
+                self.assertEqual(opencode_usage.main(["--usage-file", "nested/usage.json", "--", *command]), 0)
+                self.assertEqual(json.loads(Path("nested/usage.json").read_text())["input_tokens"], 2)
+
+    def test_opencode_wrapper_rejects_usage_paths_outside_workspace(self):
+        with tempfile.TemporaryDirectory() as directory, tempfile.TemporaryDirectory() as outside:
+            outside_path = Path(outside) / "usage.json"
+            link = Path(directory) / "link"
+            link.symlink_to(outside, target_is_directory=True)
+            for usage_file in ("nested/../usage.json", str(outside_path), "link/usage.json"):
+                with self.subTest(usage_file=usage_file), contextlib.chdir(directory):
+                    with self.assertRaises(SystemExit) as raised:
+                        opencode_usage.main(["--usage-file", usage_file, "--", sys.executable, "-c", "pass"])
+                    self.assertEqual(raised.exception.code, 2)
+            self.assertFalse(outside_path.exists())
+
+    def test_opencode_wrapper_rejects_directory_symlink_created_by_subprocess(self):
+        with tempfile.TemporaryDirectory() as directory, tempfile.TemporaryDirectory() as outside:
+            root = Path(directory)
+            nested = root / "nested"
+            nested.mkdir()
+            outside_path = Path(outside) / "usage.json"
+            code = (
+                "from pathlib import Path; "
+                f"p=Path(r'{nested}'); p.rmdir(); p.symlink_to(r'{outside}', target_is_directory=True)"
+            )
+            command = [sys.executable, "-c", code]
+            with contextlib.chdir(directory):
+                with self.assertRaises((OSError, ValueError)):
+                    opencode_usage.main(["--usage-file", "nested/usage.json", "--", *command])
+            self.assertFalse(outside_path.exists())
+
+    def test_opencode_wrapper_keeps_root_fd_when_subprocess_replaces_cwd(self):
+        with tempfile.TemporaryDirectory() as directory, tempfile.TemporaryDirectory() as outside:
+            root = Path(directory)
+            moved_root = root.with_name(root.name + "-moved")
+            outside_path = Path(outside) / ".benchmark-usage.json"
+            validated = root / "validated"
+            code = (
+                "from pathlib import Path\n"
+                "import time\n"
+                f"marker = Path(r'{validated}')\n"
+                "while not marker.exists():\n"
+                "    time.sleep(0.001)\n"
+                f"p = Path(r'{root}')\n"
+                f"p.rename(r'{moved_root}')\n"
+                f"p.symlink_to(r'{outside}', target_is_directory=True)\n"
+            )
+            command = [sys.executable, "-c", code]
+            original_validate = opencode_usage._validate_usage_path
+
+            def validate_and_signal(value, allowed_directory=None):
+                result = original_validate(value, allowed_directory)
+                validated.touch()
+                return result
+
+            with contextlib.chdir(directory), unittest.mock.patch.object(
+                opencode_usage, "_validate_usage_path", validate_and_signal
+            ):
+                self.assertEqual(opencode_usage.main(["--", *command]), 0)
+            self.assertFalse(outside_path.exists())
+            self.assertTrue((moved_root / ".benchmark-usage.json").exists())
 
     def test_rendered_opencode_variant_runs_from_workspace(self):
         with tempfile.TemporaryDirectory() as directory:
