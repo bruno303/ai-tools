@@ -1,14 +1,22 @@
 {
   "name": "opencode-gpt56-luna-single",
   "command": [
-    "opencode",
+    "python3",
+    "{repository_root}/benchmarks/opencode_usage.py",
+    "--usage-file",
+    ".benchmark-usage.json",
+    "--",
+    "opencode2",
     "run",
+    "--standalone",
+    "--format",
+    "json",
+    "--auto",
     "--model",
     "openai/gpt-5.6-luna",
-    "--dir",
-    "{workspace}",
     "{task_content}"
   ],
   "setup": [],
-  "env": {}
+  "env": {},
+  "usage_file": ".benchmark-usage.json"
 }
