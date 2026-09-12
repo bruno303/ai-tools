@@ -47,6 +47,11 @@ infrastructure, deployment/rollout, and observability or other operational
 concerns. Follow existing dependency direction and patterns. The plan should
 name repository areas, not merely list guessed files.
 
+For unfamiliar or non-trivial reconnaissance, use `analyze-codebase`; keep
+direct reads preferred for small, already-localized checks. Shared
+reconnaissance may use that skill's optional delegation, but this workflow
+remains planning-only and does not orchestrate implementation workers.
+
 Classify each finding as one of:
 
 - **RFC-settled** — decided by the RFC;
@@ -129,4 +134,5 @@ allowlists, worktrees, and dispatch details remain execution concerns. See
 
 This skill only inspects, resolves material ambiguity, and writes the plan. It
 must not implement code, run tests or other verification, perform code review,
-manage worktrees, or dispatch subagents.
+manage worktrees, or orchestrate implementation-worker dispatch. Shared
+repository reconnaissance may still follow `analyze-codebase` when needed.

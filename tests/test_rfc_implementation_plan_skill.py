@@ -23,7 +23,7 @@ class RfcImplementationPlanSkillContractTests(unittest.TestCase):
     def test_trigger_and_scope_boundaries(self):
         for phrase in ("approved", "mostly final", "draft", "redesign", "subagent-plan-execution", "explicitly invoked"):
             self.assertIn(phrase, self.skill_text.lower())
-        for phrase in ("must not implement", "run tests", "code review", "worktrees", "dispatch subagents"):
+        for phrase in ("must not implement", "run tests", "code review", "worktrees", "implementation-worker dispatch"):
             self.assertIn(phrase, self.skill_text.lower())
 
     def test_required_guidance_and_output_contract(self):
@@ -73,6 +73,15 @@ class RfcImplementationPlanSkillContractTests(unittest.TestCase):
         )
         self.assertRegex(self.normalized_skill_text, r"(?i)do not guess filenames")
         self.assertNotIn("Expected writable outputs", self.skill_text)
+
+    def test_shared_reconnaissance_reuses_analyze_without_worker_orchestration(self):
+        self.assertIn("analyze-codebase", self.skill_text)
+        self.assertRegex(self.skill_text, r"(?i)unfamiliar or non-trivial")
+        self.assertRegex(self.skill_text, r"(?i)direct reads preferred")
+        self.assertRegex(self.skill_text, r"(?i)planning-only")
+        self.assertRegex(self.skill_text, r"(?i)does not orchestrate implementation workers")
+        for model_identifier in ("gpt-5.6", "haiku", "sonnet", "opencode/"):
+            self.assertNotIn(model_identifier, self.skill_text)
 
 
 if __name__ == "__main__":

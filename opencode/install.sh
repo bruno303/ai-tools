@@ -39,7 +39,7 @@ if [ "$remove_model" = true ]; then
   bash "$root_dir/install-agents.sh" "${clean_args[@]}" opencode "$target_dir"
   temporary_dir="$(mktemp -d)"
   trap 'rm -rf -- "$temporary_dir"' EXIT
-  for agent in executor reviewer; do
+  for agent in executor reviewer codebase-reader; do
     awk '!/^[[:space:]]*model:[[:space:]].*$/' \
       "$target_dir/agents/$agent.md" > "$temporary_dir/$agent.md"
     mv -- "$temporary_dir/$agent.md" "$target_dir/agents/$agent.md"

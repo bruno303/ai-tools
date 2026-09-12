@@ -5,7 +5,7 @@ usage() {
   cat <<EOF
 Usage: $0 [--clean] <opencode|codex|claude> <target-dir>
 
-Copy the active executor and reviewer definitions for a harness.
+Copy the active agent definitions for a harness.
 EOF
 }
 
@@ -78,5 +78,6 @@ fi
 mkdir -p -- "$destination_dir"
 cp -- "$source_dir/executor.$agent_extension" "$destination_dir/"
 cp -- "$source_dir/reviewer.$agent_extension" "$destination_dir/"
+cp -- "$source_dir/codebase-reader.$agent_extension" "$destination_dir/"
 
 echo "Installed $harness agents in $destination_dir"
