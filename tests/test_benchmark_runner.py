@@ -1,3 +1,4 @@
+import argparse
 import json
 import contextlib
 import io
@@ -342,7 +343,7 @@ class BenchmarkRunnerTests(unittest.TestCase):
             self.assertNotIn("skip", output.getvalue())
 
     def test_compare_since_rejects_invalid_timestamp(self):
-        with self.assertRaises(Exception):
+        with self.assertRaises(argparse.ArgumentTypeError):
             benchmark.parse_timestamp("not-a-timestamp")
 
 
