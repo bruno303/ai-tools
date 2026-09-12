@@ -92,6 +92,13 @@ class WriteRfcSkillContractTests(unittest.TestCase):
             r"(?is)RFC scale,.{0,80}architectural decisions,.{0,80}conflicting sources",
         )
 
+    def test_unfamiliar_reconnaissance_reuses_analyze_codebase(self):
+        self.assertIn("analyze-codebase", self.skill)
+        self.assertRegex(self.normalized_skill, r"(?i)unfamiliar or non-trivial")
+        self.assertRegex(self.normalized_skill, r"(?i)direct reads preferred")
+        for model_identifier in ("gpt-5.6", "haiku", "sonnet", "opencode/"):
+            self.assertNotIn(model_identifier, self.skill)
+
     def test_examples_cover_small_large_and_incomplete_sources(self):
         for heading in ("Small feature", "Larger feature", "Incomplete or conflicting"):
             self.assertIn(heading, self.examples)

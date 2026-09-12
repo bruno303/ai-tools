@@ -20,7 +20,9 @@ planning or as a request to start coding.
    architectural decisions, or conflicting sources.
 2. Before asking questions, inspect repository guidance (`AGENTS.md`,
    `CLAUDE.md`, and equivalent), analogous features, interfaces, tests, and
-   configuration. Prefer repository evidence to guesses.
+   configuration. Prefer repository evidence to guesses. For unfamiliar or
+   non-trivial repository reconnaissance, use `analyze-codebase`; keep direct
+   reads preferred for small, already-localized checks.
 3. Distinguish source facts, repository evidence, technical inferences, proposed
    decisions, assumptions, contradictions, and unresolved questions while
    reasoning about the design. Do not mechanically label every sentence in the

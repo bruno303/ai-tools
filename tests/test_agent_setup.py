@@ -30,16 +30,19 @@ class AgentSetupTests(unittest.TestCase):
     def test_validator_accepts_custom_model_selection(self):
         customizations = {
             "opencode": {
-                "executor.md": [("opencode/gpt-5.6-luna", "custom/executor"), ("medium", "high")],
-                "reviewer.md": [("opencode/gpt-5.6-sol", "custom/reviewer"), ("low", "minimal")],
+                "executor.md": [("openai/gpt-5.6-luna", "custom/executor"), ("medium", "high")],
+                "reviewer.md": [("openai/gpt-5.6-sol", "custom/reviewer"), ("low", "minimal")],
+                "codebase-reader.md": [("openai/gpt-5.6-luna", "custom/reader"), ("low", "minimal")],
             },
             "codex": {
                 "executor.toml": [("gpt-5.6-luna", "custom-executor"), ("medium", "high")],
                 "reviewer.toml": [("gpt-5.6-sol", "custom-reviewer"), ("low", "minimal")],
+                "codebase-reader.toml": [("gpt-5.6-luna", "custom-reader"), ("low", "minimal")],
             },
             "claude": {
                 "executor.md": [("haiku", "custom-executor")],
                 "reviewer.md": [("sonnet", "custom-reviewer")],
+                "codebase-reader.md": [("haiku", "custom-reader")],
             },
         }
 
@@ -51,6 +54,7 @@ class AgentSetupTests(unittest.TestCase):
                     path = fixture_root / harness / "agents" / filename
                     content = path.read_text(encoding="utf-8")
                     for original, replacement in replacements:
+                        self.assertIn(original, content, f"{original!r} not found in {path}")
                         content = content.replace(original, replacement)
                     path.write_text(content, encoding="utf-8")
 
@@ -78,13 +82,14 @@ empty:
 
     def test_active_profiles_use_expected_harness_fields(self):
         expected = {
-            "opencode": {"executor.md", "reviewer.md"},
-            "codex": {"executor.toml", "reviewer.toml"},
-            "claude": {"executor.md", "reviewer.md"},
+            "opencode": {"executor.md", "reviewer.md", "codebase-reader.md"},
+            "codex": {"executor.toml", "reviewer.toml", "codebase-reader.toml"},
+            "claude": {"executor.md", "reviewer.md", "codebase-reader.md"},
         }
         expected_codex_instructions = {
             "executor.toml": "You are an executor agent",
             "reviewer.toml": "You are a reviewer agent",
+            "codebase-reader.toml": "You are a codebase reader agent",
         }
         for harness, filenames in expected.items():
             with self.subTest(harness=harness):
@@ -111,7 +116,12 @@ empty:
                 result = self.run_installer(harness, target)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 destination = Path(target) / relative
-                self.assertEqual({path.name for path in destination.iterdir()}, {"executor.md", "reviewer.md"} if harness != "codex" else {"executor.toml", "reviewer.toml"})
+                self.assertEqual(
+                    {path.name for path in destination.iterdir()},
+                    {"executor.md", "reviewer.md", "codebase-reader.md"}
+                    if harness != "codex"
+                    else {"executor.toml", "reviewer.toml", "codebase-reader.toml"},
+                )
 
     def test_rejects_invalid_harness_and_missing_target(self):
         invalid = self.run_installer("unknown", "/tmp/agent-test-target")
@@ -178,8 +188,8 @@ empty:
 
             self.assertEqual(result.returncode, 0, result.stderr)
             destination = target_path / "agents"
-            self.assertEqual({path.name for path in destination.iterdir()}, {"executor.md", "reviewer.md"})
-            for agent in ("executor.md", "reviewer.md"):
+            self.assertEqual({path.name for path in destination.iterdir()}, {"executor.md", "reviewer.md", "codebase-reader.md"})
+            for agent in ("executor.md", "reviewer.md", "codebase-reader.md"):
                 self.assertNotIn("model:", (destination / agent).read_text(encoding="utf-8"))
             self.assertTrue(unrelated.exists())
 

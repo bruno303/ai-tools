@@ -197,6 +197,10 @@ Do not ask merely because these topics exist. Ask only when they are relevant to
 
 Before asking questions, inspect enough repository context to distinguish true ambiguity from already-solved project conventions.
 
+For unfamiliar or non-trivial reconnaissance, use `analyze-codebase`; direct
+reads remain preferred for small, already-localized checks. Continue with the evidence
+available when optional reconnaissance delegation is unavailable.
+
 When relevant, check:
 
 - `AGENTS.md` / `CLAUDE.md`;

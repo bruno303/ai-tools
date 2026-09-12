@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the active executor/reviewer definitions for all supported harnesses."""
+"""Validate all active agent definitions for all supported harnesses."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from typing import Any
 
 EXPECTED = {
     "opencode": {
-        "files": {"executor.md", "reviewer.md"},
+        "files": {"executor.md", "reviewer.md", "codebase-reader.md"},
         "format": "frontmatter",
         "required": {
             "executor": {
@@ -25,10 +25,15 @@ EXPECTED = {
                 "model": None,
                 "reasoningEffort": None,
             },
+            "codebase-reader": {
+                "mode": "subagent",
+                "model": None,
+                "reasoningEffort": None,
+            },
         },
     },
     "codex": {
-        "files": {"executor.toml", "reviewer.toml"},
+        "files": {"executor.toml", "reviewer.toml", "codebase-reader.toml"},
         "format": "toml",
         "required": {
             "executor": {
@@ -45,10 +50,17 @@ EXPECTED = {
                 "model_reasoning_effort": None,
                 "developer_instructions": "You are a reviewer agent",
             },
+            "codebase-reader": {
+                "name": "codebase-reader",
+                "description": None,
+                "model": None,
+                "model_reasoning_effort": None,
+                "developer_instructions": "You are a codebase reader agent",
+            },
         },
     },
     "claude": {
-        "files": {"executor.md", "reviewer.md"},
+        "files": {"executor.md", "reviewer.md", "codebase-reader.md"},
         "format": "frontmatter",
         "required": {
             "executor": {
@@ -58,6 +70,11 @@ EXPECTED = {
             },
             "reviewer": {
                 "name": "reviewer",
+                "description": None,
+                "model": None,
+            },
+            "codebase-reader": {
+                "name": "codebase-reader",
                 "description": None,
                 "model": None,
             },

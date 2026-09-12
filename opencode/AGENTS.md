@@ -10,7 +10,7 @@
 - `opencode.jsonc` enables a local Serena MCP server via `uvx`; several prompts require Serena-first repository inspection when available.
 
 ## Structure That Matters
-- `agents/*.md` are model-only Markdown profiles with YAML frontmatter. The active set is `executor.md` and `reviewer.md`; retired definitions are under `../archive/opencode/agents/` and are not installed.
+- `agents/*.md` are model-only Markdown profiles with YAML frontmatter. The active set is `executor.md`, `reviewer.md`, and `codebase-reader.md`; retired definitions are under `../archive/opencode/agents/` and are not installed.
 - `skills/<skill-name>/SKILL.md` are Markdown skill files with YAML frontmatter.
 - `plugins/wsl-notify.ts` exists for local OpenCode usage, but it is not installed by `install.sh`.
 - `install.sh` does not copy `AGENTS.md`, `README.md`, `plugins/`, or `opencode.jsonc`.
@@ -27,8 +27,9 @@
 
 ## Script Behavior Worth Remembering
 - `install.sh` accepts `--clean` or `-c`, a positional target directory, or `TARGET_DIR`, and preserves `--remove-model` for compatibility.
-- `install.sh` delegates active OpenCode agent installation to `../install-agents.sh`, which replaces only `agents/executor.md` and `agents/reviewer.md`.
+- `install.sh` delegates active OpenCode agent installation to `../install-agents.sh`, which installs `agents/executor.md`, `agents/reviewer.md`, and `agents/codebase-reader.md`.
 - The root installer also supports Codex (`<target>/.codex/agents`) and Claude (`<target>/.claude/agents`).
+- Each harness installs the three active profiles: `executor`, `reviewer`, and optional `codebase-reader`. The reader is used by `analyze-codebase` for unfamiliar or non-trivial reconnaissance; direct reads remain preferred for small checks, and unavailable reader profiles fall back to parent-session analysis.
 - `ai-tools.sh` defines `opencode-run()` as a Docker wrapper that mounts the current working tree plus OpenCode config and state directories.
 
 ## Repo Reality

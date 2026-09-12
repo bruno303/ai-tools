@@ -4,23 +4,31 @@ Reusable agent and skill definitions for agentic software development workflows.
 
 ## Repository Overview
 
-- `opencode/agents/`, `codex/agents/`, and `claude/agents/` contain the active `executor` and `reviewer` roles in each harness's native format.
+- `opencode/agents/`, `codex/agents/`, and `claude/agents/` contain the active `executor`, `reviewer`, and `codebase-reader` roles in each harness's native format.
 - `archive/opencode/agents/` preserves the retired `architect`, `builder`, `reviewer`, and `spec-driver` definitions for reference; archived files are not installed.
 - `skills/` contains reusable skills shared across agents.
 - `benchmarks/` contains a harness-agnostic runner and repeatable scenarios for comparing models, skills, and workflows.
 
 ## Agents
 
-Each harness ships two model-only profiles:
+Each harness ships three model-only profiles:
 
 - **`executor`** selects the implementation model.
 - **`reviewer`** selects the review model.
+- **`codebase-reader`** selects the optional reconnaissance model used by
+  `analyze-codebase` for unfamiliar or non-trivial repository reading.
 
 The active agent files intentionally contain no behavioral prompt, handback schema, or workflow instructions. Skills provide those instructions and coordinate how the main agent uses each profile.
 
 The former `architect`, `builder`, and `spec-driver` orchestration roles, along with the prior reviewer prompt, are archived under `archive/opencode/agents/`.
 
-Model assignments are native to each harness: OpenCode uses `opencode/gpt-5.6-luna` for the executor and `opencode/gpt-5.6-sol` for the reviewer; Codex uses `gpt-5.6-luna` and `gpt-5.6-sol`; Claude uses `haiku` and `sonnet`. Customize model and, where supported, reasoning-effort fields in the corresponding files under `opencode/agents/`, `codex/agents/`, or `claude/agents/`.
+Model assignments are native to each harness: OpenCode uses
+`openai/gpt-5.6-luna`, `openai/gpt-5.6-sol`, and
+`openai/gpt-5.6-luna` for executor, reviewer, and codebase-reader;
+Codex uses `gpt-5.6-luna`, `gpt-5.6-sol`, and `gpt-5.6-luna`; Claude uses
+`haiku`, `sonnet`, and `haiku`. Customize model and, where supported,
+reasoning-effort fields in the corresponding files under `opencode/agents/`,
+`codex/agents/`, or `claude/agents/`.
 
 ## Skills
 
@@ -60,7 +68,7 @@ See `benchmarks/README.md` for the detailed runner, scenario, and variant guide.
 
 ## Installation
 
-Install the active pair for one harness into a target repository:
+Install all three active profiles for one harness into a target repository:
 
 ```bash
 ./install-agents.sh <opencode|codex|claude> <target-dir>
@@ -85,5 +93,6 @@ Or run `install-skils.sh`, which also installs external skills (`using-git-workt
 
 - The main agent/orchestrator and skills own discovery, planning, approval, coordination, and final integration.
 - `subagent-plan-execution` dispatches implementation and fix workers through the `executor` profile and review workers through the `reviewer` profile; those profiles own model selection while the skill owns behavior.
+- `analyze-codebase` owns focused repository reconnaissance; it may use the `codebase-reader` profile for unfamiliar or non-trivial areas and falls back to the parent when unavailable. The reader reports evidence only; the parent remains responsible for interpretation and verification.
 - Select the native model profile needed by the coordinating skill; the archived legacy definitions are not part of the active installation.
 - Skills are loaded as needed based on task type (analysis, planning, API/DB changes, verification, review, debugging, language conventions).
