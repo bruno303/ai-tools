@@ -17,8 +17,8 @@ Do not use for:
 Build a concise map of the relevant area before planning or editing code.
 
 # Process
-1. Decide whether the repository reconnaissance is trivial or non-trivial. Keep trivial, already-localized work in the parent session.
-2. For non-trivial reconnaissance, preferably dispatch a fresh named `codebase-reader` when that profile is supported. The parent remains responsible for interpreting the result and verifying it against the repository.
+1. Treat reconnaissance as trivial only when the relevant file and symbol are already known and the remaining work needs no more than a few targeted reads. Do not classify reconnaissance as trivial merely because the repository or module is small.
+2. For all non-trivial reconnaissance, dispatch a fresh named `codebase-reader` when that profile is supported. The parent remains responsible for interpreting the result and verifying it against the repository.
 3. Give the reader a concrete, task-directed request containing:
    - the concrete user task and the question the reconnaissance must answer
    - the repository root and any known scope (paths, modules, or symbols)
@@ -36,11 +36,12 @@ Build a concise map of the relevant area before planning or editing code.
 - Focus on only the code relevant to the task.
 - Distinguish facts from hypotheses.
 - Do not recommend refactors unless they are directly relevant.
-- Delegation is optional and task-directed; never make model selection part of this skill or hard-code a model.
+- Delegate by default whenever reconnaissance is not already localized. Keep the work in the parent only when it meets the trivial threshold above or delegation is unavailable.
+- Never make model selection part of this skill or hard-code a model.
 - Limit reconnaissance to the relevant scope and stop once there is enough evidence to answer the task.
 
-# Optional reader delegation
-When delegation is used, ask the fresh `codebase-reader` for a concise handback with exactly the context needed for the parent to proceed. It should cover:
+# Reader delegation
+Ask the fresh `codebase-reader` for a concise handback with exactly the context needed for the parent to proceed. It should cover:
 
 - relevant files and modules
 - current flow summary

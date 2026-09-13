@@ -18,7 +18,7 @@ class AnalyzeCodebaseSkillContractTests(unittest.TestCase):
         self.assertRegex(self.skill, r"\A---\s*\nname:\s*analyze-codebase\s*\n")
         self.assertRegex(self.skill, r"description:\s*.+\n---")
 
-    def test_delegation_is_optional_and_task_directed(self):
+    def test_nontrivial_reconnaissance_delegates_by_default(self):
         for phrase in (
             "non-trivial",
             "fresh named `codebase-reader`",
@@ -30,8 +30,14 @@ class AnalyzeCodebaseSkillContractTests(unittest.TestCase):
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.skill)
-        self.assertRegex(self.skill, r"(?i)delegation is optional")
+        self.assertIn("Delegate by default", self.skill)
+        self.assertNotRegex(self.skill, r"(?i)delegation is optional")
         self.assertRegex(self.skill, r"(?i)not an exhaustive repository survey")
+
+    def test_trivial_threshold_requires_localized_scope(self):
+        self.assertIn("relevant file and symbol are already known", self.skill)
+        self.assertIn("no more than a few targeted reads", self.skill)
+        self.assertIn("merely because the repository or module is small", self.skill)
 
     def test_unresolved_profile_falls_back_to_parent_analysis(self):
         self.assertRegex(self.skill, r"(?i)profile cannot be resolved")
@@ -53,7 +59,7 @@ class AnalyzeCodebaseSkillContractTests(unittest.TestCase):
         self.assertRegex(self.skill, r"(?i)parent.*responsible.*verif")
 
     def test_model_selection_is_not_hard_coded_and_scope_stays_limited(self):
-        self.assertIn("never make model selection part of this skill", self.skill)
+        self.assertRegex(self.skill, r"(?i)never make model selection part of this skill")
         self.assertRegex(self.skill, r"(?i)hard-code a model")
         self.assertRegex(self.normalized_skill, r"(?i)relevant scope")
         self.assertRegex(self.normalized_skill, r"(?i)enough evidence")
