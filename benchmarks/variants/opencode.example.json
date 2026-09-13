@@ -14,9 +14,12 @@
     "--auto",
     "--model",
     "openai/gpt-5.6",
-    "{task_content}"
+    "{task_content}. Work unattended: do not ask questions, invoke the question tool, or wait for user input. Resolve ambiguity from the task, repository conventions, and reasonable assumptions."
   ],
-  "setup": [],
+  "setup": [
+    ["cp", "{repository_root}/benchmarks/opencode-noninteractive.jsonc", "{workspace}/opencode.jsonc"],
+    ["python3", "{repository_root}/benchmarks/verify_opencode_config.py"]
+  ],
   "env": {},
   "usage_file": ".benchmark-usage.json"
 }

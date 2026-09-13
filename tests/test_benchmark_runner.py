@@ -16,9 +16,59 @@ sys.path.insert(0, str(ROOT / "benchmarks"))
 
 import benchmark
 import opencode_usage
+import verify_opencode_config
 
 
 class BenchmarkRunnerTests(unittest.TestCase):
+    def test_opencode_variants_install_narrow_config_and_unattended_prompt(self):
+        config = json.loads((ROOT / "benchmarks" / "opencode-noninteractive.jsonc").read_text(encoding="utf-8"))
+        self.assertEqual(config["permissions"], [
+            {"action": "external_directory", "resource": "$HOME/.agents/skills/*", "effect": "allow"},
+            {"action": "read", "resource": "$HOME/.agents/skills/*", "effect": "allow"},
+        ])
+        for name in ("gpt56-luna-subagent.json", "gpt56-luna-single.json", "opencode.example.json"):
+            variant = benchmark.load_json(ROOT / "benchmarks" / "variants" / name)
+            self.assertEqual(len(variant["setup"]), 2)
+            self.assertEqual(variant["setup"][0][0], "cp")
+            self.assertTrue(variant["setup"][1][-1].endswith("/verify_opencode_config.py"))
+            prompt = variant["command"][-1]
+            self.assertIn("do not ask questions", prompt)
+            self.assertIn("question tool", prompt)
+            self.assertIn("wait for user input", prompt)
+
+    def test_opencode_config_verifier_requires_discovered_workspace_document(self):
+        with tempfile.TemporaryDirectory() as directory, contextlib.chdir(directory):
+            Path("opencode.jsonc").write_text("{}", encoding="utf-8")
+            with unittest.mock.patch.object(
+                verify_opencode_config.subprocess,
+                "run",
+                return_value=type("Completed", (), {"returncode": 0, "stdout": json.dumps([{"type": "document", "path": str(Path.cwd() / "opencode.jsonc"), "info": {"permissions": list(verify_opencode_config.EXPECTED_PERMISSIONS)}}]), "stderr": ""})(),
+            ) as run:
+                self.assertEqual(verify_opencode_config.main(), 0)
+            run.assert_called_once_with(
+                ["opencode2", "debug", "config"],
+                cwd=Path.cwd(), capture_output=True, text=True, check=False
+            )
+
+    def test_opencode_config_verifier_rejects_unrelated_documents_and_path_mismatches(self):
+        cases = (
+            [{"type": "document", "path": str(Path.cwd() / "other.jsonc"), "info": {"permissions": list(verify_opencode_config.EXPECTED_PERMISSIONS)}}],
+            [{"type": "document", "path": str(Path.cwd() / "opencode.json"), "info": {"permissions": list(verify_opencode_config.EXPECTED_PERMISSIONS)}}],
+            [{"type": "other", "path": str(Path.cwd() / "opencode.jsonc"), "info": {"permissions": list(verify_opencode_config.EXPECTED_PERMISSIONS)}}],
+            [{"type": "document", "path": str(Path.cwd() / "opencode.jsonc")}],
+            [{"type": "document", "path": str(Path.cwd() / "opencode.jsonc"), "info": {"permissions": []}}],
+            [{"type": "document", "path": str(Path.cwd() / "opencode.jsonc"), "info": {"permissions": [{"action": "read"}]}}],
+        )
+        with tempfile.TemporaryDirectory() as directory, contextlib.chdir(directory):
+            Path("opencode.jsonc").write_text("{}", encoding="utf-8")
+            for documents in cases:
+                with self.subTest(documents=documents), unittest.mock.patch.object(
+                    verify_opencode_config.subprocess,
+                    "run",
+                    return_value=type("Completed", (), {"returncode": 0, "stdout": json.dumps(documents), "stderr": ""})(),
+                ):
+                    self.assertEqual(verify_opencode_config.main(), 1)
+
     def test_opencode_usage_aggregates_known_model_events_and_ignores_unknown(self):
         usage = opencode_usage.parse_usage([
             {"type": "step_finish", "part": {"type": "step-finish", "tokens": {"input": 10, "output": 4, "cache": {"read": 6}}, "cost": 0.25}},

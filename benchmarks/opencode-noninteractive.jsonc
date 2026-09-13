@@ -1,0 +1,15 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "permissions": [
+    {
+      "action": "external_directory",
+      "resource": "$HOME/.agents/skills/*",
+      "effect": "allow"
+    },
+    {
+      "action": "read",
+      "resource": "$HOME/.agents/skills/*",
+      "effect": "allow"
+    }
+  ]
+}

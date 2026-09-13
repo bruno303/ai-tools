@@ -215,6 +215,14 @@ workspace, and review the command, model, setup, and environment before using
 a local variant. Do not use `--auto` with untrusted tasks or a workspace
 containing secrets.
 
+The OpenCode benchmark variants copy `opencode-noninteractive.jsonc` into each
+temporary workspace and verify it with `opencode2 debug config` before running.
+That config only allows `external_directory` and `read` access to
+`$HOME/.agents/skills/*`; it does not deny the question permission. Prompts
+also instruct agents to work unattended: they must not ask questions, invoke
+the question tool, or wait for user input, and should resolve ambiguity from
+the task, repository conventions, and reasonable assumptions.
+
 ### Result hygiene
 
 Result files are local artifacts. If a result JSON is invalid or incomplete,
