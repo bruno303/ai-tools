@@ -3,15 +3,58 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
-import json
 from pathlib import Path
+from typing import Iterator
 
 EXPECTED_PERMISSIONS = (
     {"action": "external_directory", "resource": "$HOME/.agents/skills/*", "effect": "allow"},
     {"action": "read", "resource": "$HOME/.agents/skills/*", "effect": "allow"},
 )
+
+
+def iter_mappings(value: object) -> Iterator[dict[str, object]]:
+    if isinstance(value, dict):
+        yield value
+        for item in value.values():
+            yield from iter_mappings(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from iter_mappings(item)
+
+
+def has_expected_permissions(document: dict[str, object]) -> bool:
+    info = document.get("info")
+    permissions = info.get("permissions") if isinstance(info, dict) else None
+    if not isinstance(permissions, list) or not permissions:
+        return False
+    if not all(is_valid_permission(permission) for permission in permissions):
+        return False
+    return all(permission in permissions for permission in EXPECTED_PERMISSIONS)
+
+
+def is_valid_permission(permission: object) -> bool:
+    return (
+        isinstance(permission, dict)
+        and set(permission) == {"action", "resource", "effect"}
+        and all(isinstance(permission[field], str) for field in ("action", "resource", "effect"))
+    )
+
+
+def is_workspace_document(document: dict[str, object], expected_path: Path) -> bool:
+    path = document.get("path")
+    if document.get("type") != "document" or not isinstance(path, str):
+        return False
+    try:
+        return Path(path).resolve() == expected_path and has_expected_permissions(document)
+    except OSError:
+        return False
+
+
+def has_workspace_document(debug_config: object, expected_path: Path) -> bool:
+    return any(is_workspace_document(document, expected_path) for document in iter_mappings(debug_config))
 
 
 def main() -> int:
@@ -38,34 +81,7 @@ def main() -> int:
         print(output, file=sys.stderr, end="")
         return 1
 
-    expected_path = config.resolve()
-
-    def has_workspace_document(value: object) -> bool:
-        if isinstance(value, dict):
-            path = value.get("path")
-            if value.get("type") == "document" and isinstance(path, str):
-                try:
-                    if Path(path).resolve() == expected_path:
-                        info = value.get("info")
-                        permissions = info.get("permissions") if isinstance(info, dict) else None
-                        if not isinstance(permissions, list) or not permissions:
-                            return False
-                        if any(
-                            not isinstance(permission, dict)
-                            or set(permission) != {"action", "resource", "effect"}
-                            or not all(isinstance(permission[field], str) for field in ("action", "resource", "effect"))
-                            for permission in permissions
-                        ):
-                            return False
-                        return all(permission in permissions for permission in EXPECTED_PERMISSIONS)
-                except OSError:
-                    return False
-            return any(has_workspace_document(item) for item in value.values())
-        if isinstance(value, list):
-            return any(has_workspace_document(item) for item in value)
-        return False
-
-    if not has_workspace_document(debug_config):
+    if not has_workspace_document(debug_config, config.resolve()):
         print("workspace-local opencode.jsonc was not reported as a discovered document", file=sys.stderr)
         print(output, file=sys.stderr, end="")
         return 1
