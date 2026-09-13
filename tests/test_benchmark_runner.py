@@ -1,19 +1,177 @@
+import argparse
 import json
+import contextlib
+import io
 import os
 import shutil
 import sys
 import tempfile
 import time
 import unittest
+import unittest.mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "benchmarks"))
 
 import benchmark
+import opencode_usage
+import verify_opencode_config
 
 
 class BenchmarkRunnerTests(unittest.TestCase):
+    def test_opencode_variants_install_narrow_config_and_unattended_prompt(self):
+        config = json.loads((ROOT / "benchmarks" / "opencode-noninteractive.jsonc").read_text(encoding="utf-8"))
+        self.assertEqual(config["permissions"], [
+            {"action": "external_directory", "resource": "$HOME/.agents/skills/*", "effect": "allow"},
+            {"action": "read", "resource": "$HOME/.agents/skills/*", "effect": "allow"},
+        ])
+        for name in ("gpt56-luna-subagent.json", "gpt56-luna-single.json", "opencode.example.json"):
+            variant = benchmark.load_json(ROOT / "benchmarks" / "variants" / name)
+            self.assertEqual(len(variant["setup"]), 2)
+            self.assertEqual(variant["setup"][0][0], "cp")
+            self.assertTrue(variant["setup"][1][-1].endswith("/verify_opencode_config.py"))
+            prompt = variant["command"][-1]
+            self.assertIn("do not ask questions", prompt)
+            self.assertIn("question tool", prompt)
+            self.assertIn("wait for user input", prompt)
+
+    def test_opencode_config_verifier_requires_discovered_workspace_document(self):
+        with tempfile.TemporaryDirectory() as directory, contextlib.chdir(directory):
+            Path("opencode.jsonc").write_text("{}", encoding="utf-8")
+            with unittest.mock.patch.object(
+                verify_opencode_config.subprocess,
+                "run",
+                return_value=type("Completed", (), {"returncode": 0, "stdout": json.dumps([{"type": "document", "path": str(Path.cwd() / "opencode.jsonc"), "info": {"permissions": list(verify_opencode_config.EXPECTED_PERMISSIONS)}}]), "stderr": ""})(),
+            ) as run:
+                self.assertEqual(verify_opencode_config.main(), 0)
+            run.assert_called_once_with(
+                ["opencode2", "debug", "config"],
+                cwd=Path.cwd(), capture_output=True, text=True, check=False
+            )
+
+    def test_opencode_config_verifier_rejects_unrelated_documents_and_path_mismatches(self):
+        cases = (
+            [{"type": "document", "path": str(Path.cwd() / "other.jsonc"), "info": {"permissions": list(verify_opencode_config.EXPECTED_PERMISSIONS)}}],
+            [{"type": "document", "path": str(Path.cwd() / "opencode.json"), "info": {"permissions": list(verify_opencode_config.EXPECTED_PERMISSIONS)}}],
+            [{"type": "other", "path": str(Path.cwd() / "opencode.jsonc"), "info": {"permissions": list(verify_opencode_config.EXPECTED_PERMISSIONS)}}],
+            [{"type": "document", "path": str(Path.cwd() / "opencode.jsonc")}],
+            [{"type": "document", "path": str(Path.cwd() / "opencode.jsonc"), "info": {"permissions": []}}],
+            [{"type": "document", "path": str(Path.cwd() / "opencode.jsonc"), "info": {"permissions": [{"action": "read"}]}}],
+        )
+        with tempfile.TemporaryDirectory() as directory, contextlib.chdir(directory):
+            Path("opencode.jsonc").write_text("{}", encoding="utf-8")
+            for documents in cases:
+                with self.subTest(documents=documents), unittest.mock.patch.object(
+                    verify_opencode_config.subprocess,
+                    "run",
+                    return_value=type("Completed", (), {"returncode": 0, "stdout": json.dumps(documents), "stderr": ""})(),
+                ):
+                    self.assertEqual(verify_opencode_config.main(), 1)
+
+    def test_opencode_usage_aggregates_known_model_events_and_ignores_unknown(self):
+        usage = opencode_usage.parse_usage([
+            {"type": "step_finish", "part": {"type": "step-finish", "tokens": {"input": 10, "output": 4, "cache": {"read": 6}}, "cost": 0.25}},
+            {"type": "tool_use", "part": {"type": "tool", "tool": "task", "new_field": True}},
+            {"type": "future-event", "part": {"tokens": {"input": 999}, "cost": 99}},
+            {"type": "step-finish-extra", "part": {"tokens": {"input": 999}, "cost": 99}},
+        ])
+        self.assertEqual(usage["input_tokens"], 10)
+        self.assertEqual(usage["cached_input_tokens"], 6)
+        self.assertEqual(usage["output_tokens"], 4)
+        self.assertEqual(usage["model_calls"], 1)
+        self.assertEqual(usage["subagent_calls"], 1)
+        self.assertEqual(usage["cost"], 0.25)
+
+    def test_opencode_wrapper_preserves_failure_and_writes_usage_atomically(self):
+        with tempfile.TemporaryDirectory() as directory:
+            command = [sys.executable, "-c", "import json; print(json.dumps({'type':'step_finish','part':{'type':'step-finish','tokens':{'input':2}}})); raise SystemExit(7)"]
+            with contextlib.chdir(directory):
+                self.assertEqual(opencode_usage.main(["--", *command]), 7)
+                self.assertEqual(json.loads(Path(".benchmark-usage.json").read_text())["input_tokens"], 2)
+
+    def test_opencode_wrapper_accepts_nested_usage_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            command = [sys.executable, "-c", "import json; print(json.dumps({'type':'step_finish','part':{'tokens':{'input':2}}}))"]
+            with contextlib.chdir(directory):
+                self.assertEqual(opencode_usage.main(["--usage-file", "nested/usage.json", "--", *command]), 0)
+                self.assertEqual(json.loads(Path("nested/usage.json").read_text())["input_tokens"], 2)
+
+    def test_opencode_wrapper_rejects_usage_paths_outside_workspace(self):
+        with tempfile.TemporaryDirectory() as directory, tempfile.TemporaryDirectory() as outside:
+            outside_path = Path(outside) / "usage.json"
+            link = Path(directory) / "link"
+            link.symlink_to(outside, target_is_directory=True)
+            for usage_file in ("nested/../usage.json", str(outside_path), "link/usage.json"):
+                with self.subTest(usage_file=usage_file), contextlib.chdir(directory):
+                    with self.assertRaises(SystemExit) as raised:
+                        opencode_usage.main(["--usage-file", usage_file, "--", sys.executable, "-c", "pass"])
+                    self.assertEqual(raised.exception.code, 2)
+            self.assertFalse(outside_path.exists())
+
+    def test_opencode_wrapper_rejects_directory_symlink_created_by_subprocess(self):
+        with tempfile.TemporaryDirectory() as directory, tempfile.TemporaryDirectory() as outside:
+            root = Path(directory)
+            nested = root / "nested"
+            nested.mkdir()
+            outside_path = Path(outside) / "usage.json"
+            code = (
+                "from pathlib import Path; "
+                f"p=Path(r'{nested}'); p.rmdir(); p.symlink_to(r'{outside}', target_is_directory=True)"
+            )
+            command = [sys.executable, "-c", code]
+            with contextlib.chdir(directory):
+                with self.assertRaises((OSError, ValueError)):
+                    opencode_usage.main(["--usage-file", "nested/usage.json", "--", *command])
+            self.assertFalse(outside_path.exists())
+
+    def test_opencode_wrapper_keeps_root_fd_when_subprocess_replaces_cwd(self):
+        with tempfile.TemporaryDirectory() as directory, tempfile.TemporaryDirectory() as outside:
+            root = Path(directory)
+            moved_root = root.with_name(root.name + "-moved")
+            outside_path = Path(outside) / ".benchmark-usage.json"
+            validated = root / "validated"
+            code = (
+                "from pathlib import Path\n"
+                "import time\n"
+                f"marker = Path(r'{validated}')\n"
+                "while not marker.exists():\n"
+                "    time.sleep(0.001)\n"
+                f"p = Path(r'{root}')\n"
+                f"p.rename(r'{moved_root}')\n"
+                f"p.symlink_to(r'{outside}', target_is_directory=True)\n"
+            )
+            command = [sys.executable, "-c", code]
+            original_validate = opencode_usage._validate_usage_path
+
+            def validate_and_signal(value, allowed_directory=None):
+                result = original_validate(value, allowed_directory)
+                validated.touch()
+                return result
+
+            with contextlib.chdir(directory), unittest.mock.patch.object(
+                opencode_usage, "_validate_usage_path", validate_and_signal
+            ):
+                self.assertEqual(opencode_usage.main(["--", *command]), 0)
+            self.assertFalse(outside_path.exists())
+            self.assertTrue((moved_root / ".benchmark-usage.json").exists())
+
+    def test_rendered_opencode_variant_runs_from_workspace(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            scenario = self.make_scenario(root, "rendered", [])
+            variant = ROOT / "benchmarks" / "variants" / "opencode.example.json"
+            workspace = root / "workspace"
+            workspace.mkdir()
+            task = root / "task.md"
+            task.write_text("task", encoding="utf-8")
+            command = benchmark.render_command(benchmark.load_json(variant)["command"], task, workspace)
+            self.assertEqual(Path(command[1]), ROOT / "benchmarks" / "opencode_usage.py")
+            separator = command.index("--")
+            command[separator + 1:] = [sys.executable, "-c", "import json; print(json.dumps({'type':'step_finish','part':{'type':'step-finish','tokens':{'input':3}}}))"]
+            completed = benchmark.run_command(command, workspace, os.environ.copy(), 10, quiet=True)
+            self.assertEqual(completed["exit_code"], 0)
+            self.assertEqual(json.loads((workspace / ".benchmark-usage.json").read_text())["input_tokens"], 3)
     def make_scenario(self, root, name, command, verification=None, hidden=False):
         scenario_dir = root / name
         fixture = scenario_dir / "fixture"
@@ -169,6 +327,74 @@ class BenchmarkRunnerTests(unittest.TestCase):
                 time.sleep(0.05)
             else:
                 self.fail("inherited-pipe child was not terminated")
+
+    def test_compare_since_is_inclusive_and_handles_timezones(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            results = []
+            for name, started_at in (
+                ("before", "2024-01-01T11:59:59+00:00"),
+                ("at", "2024-01-01T12:00:00+00:00"),
+                ("offset", "2024-01-01T13:00:00+01:00"),
+            ):
+                path = root / f"{name}.json"
+                path.write_text(
+                    json.dumps(
+                        {
+                            "scenario": "scenario",
+                            "variant": name,
+                            "started_at": started_at,
+                            "success": True,
+                            "duration_seconds": 1,
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+                results.append(str(path))
+
+            args = type("Args", (), {
+                "results": results,
+                "scenario": None,
+                "variant": None,
+                "since": benchmark.parse_timestamp("2024-01-01T12:00:00-00:00"),
+            })()
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(benchmark.command_compare(args), 0)
+            self.assertIn("| scenario | at | 1 |", output.getvalue())
+            self.assertIn("| scenario | offset | 1 |", output.getvalue())
+            self.assertNotIn("| scenario | before |", output.getvalue())
+
+    def test_compare_since_composes_with_scenario_and_variant_filters(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            paths = []
+            for index, (scenario, variant) in enumerate((("keep", "target"), ("keep", "other"), ("skip", "target"))):
+                path = root / f"{index}.json"
+                path.write_text(json.dumps({
+                    "scenario": scenario,
+                    "variant": variant,
+                    "started_at": "2024-01-02T00:00:00Z",
+                    "success": True,
+                    "duration_seconds": 1,
+                }), encoding="utf-8")
+                paths.append(str(path))
+            args = type("Args", (), {
+                "results": paths,
+                "scenario": "keep",
+                "variant": "target",
+                "since": benchmark.parse_timestamp("2024-01-01T00:00:00Z"),
+            })()
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                benchmark.command_compare(args)
+            self.assertIn("| keep | target | 1 |", output.getvalue())
+            self.assertNotIn("other", output.getvalue())
+            self.assertNotIn("skip", output.getvalue())
+
+    def test_compare_since_rejects_invalid_timestamp(self):
+        with self.assertRaises(argparse.ArgumentTypeError):
+            benchmark.parse_timestamp("not-a-timestamp")
 
 
 if __name__ == "__main__":

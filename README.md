@@ -62,7 +62,7 @@ python3 benchmarks/benchmark.py run \
   benchmarks/variants/opencode.example.json
 ```
 
-Runs persist independent JSON results with success, verification output, and wall-clock time. Optional harness-exported token/call metrics are also preserved. Pass multiple scenario files or directories before the final variant path; use `--repeat` for nondeterministic sampling, `--verbose` for live agent output, `--quiet` to suppress heartbeats and streaming, and `--results-dir DIR` to redirect result files. Use `benchmark.py compare` to aggregate each scenario/variant pair, with optional `--scenario NAME` and `--variant NAME` filters.
+Runs persist independent JSON results with success, verification output, and wall-clock time. Optional harness-exported token/call metrics are also preserved. Pass multiple scenario files or directories before the final variant path; use `--repeat 3` to `--repeat 5` for nondeterministic sampling, `--verbose` for live agent output, `--quiet` to suppress heartbeats and streaming, and `--results-dir DIR` to redirect result files. Use `benchmark.py compare` to aggregate each scenario/variant pair, with optional `--scenario NAME`, `--variant NAME`, and ISO-8601 `--since TIMESTAMP` filters. Invalid result JSONs are local, untracked artifacts; remove or quarantine them before comparison. The example OpenCode variants use `--auto`, so run them only in disposable workspaces without secrets.
 
 See `benchmarks/README.md` for the detailed runner, scenario, and variant guide.
 

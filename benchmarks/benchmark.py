@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parent
+REPOSITORY_ROOT = ROOT.parent
 RESULTS_DIR = ROOT / "results"
 DURATION_SECONDS = "duration_seconds"
 INPUT_TOKENS = "input_tokens"
@@ -31,6 +32,16 @@ def load_json(path: Path) -> dict[str, Any]:
         return json.load(handle)
 
 
+def parse_timestamp(value: str) -> datetime:
+    try:
+        timestamp = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("expected an ISO-8601 timestamp") from error
+    if timestamp.tzinfo is None or timestamp.utcoffset() is None:
+        raise argparse.ArgumentTypeError("timestamp must include a timezone")
+    return timestamp.astimezone(timezone.utc)
+
+
 def normalize_command(command: str | list[str]) -> list[str]:
     if isinstance(command, str):
         return shlex.split(command)
@@ -40,6 +51,7 @@ def normalize_command(command: str | list[str]) -> list[str]:
 def render_command(command: str | list[str], task_path: Path, workspace: Path) -> list[str]:
     task_content = task_path.read_text(encoding="utf-8")
     replacements = {
+        "{repository_root}": str(REPOSITORY_ROOT),
         "{task_file}": str(task_path),
         "{workspace}": str(workspace),
         "{task_content}": task_content,
@@ -421,7 +433,10 @@ def command_run(args: argparse.Namespace) -> int:
 def command_compare(args: argparse.Namespace) -> int:
     results = [load_json(Path(path)) for path in args.results]
     groups: dict[str, list[dict[str, Any]]] = {}
+    since = getattr(args, "since", None)
     for result in results:
+        if since is not None and parse_timestamp(result["started_at"]) < since:
+            continue
         if args.scenario and result.get("scenario") != args.scenario:
             continue
         if args.variant and result.get("variant") != args.variant:
@@ -463,6 +478,7 @@ def build_parser() -> argparse.ArgumentParser:
     compare_parser.add_argument("results", nargs="+")
     compare_parser.add_argument("--scenario")
     compare_parser.add_argument("--variant")
+    compare_parser.add_argument("--since", type=parse_timestamp)
     compare_parser.set_defaults(func=command_compare)
 
     return parser
