@@ -66,6 +66,51 @@ Use the strongest available evidence:
 
 Inspect only enough repository context to understand the change.
 
+## Repository reconnaissance
+
+Use focused repository reconnaissance only when the diff is not enough to
+understand the changed behavior and its surrounding execution paths.
+
+Treat reconnaissance as trivial when the changed area is already localized and
+the relevant callers, dependencies, contracts, and surrounding patterns can be
+understood with a few targeted reads.
+
+For non-trivial reconnaissance, dispatch a fresh named `codebase-reader` when
+that profile is supported. Typical triggers include:
+
+- changes spanning multiple modules or architectural boundaries;
+- unfamiliar code areas;
+- persistence, transactions, concurrency, retries, or idempotency;
+- external integrations or public contracts;
+- changes whose risk depends on callers or downstream behavior not visible in
+  the diff.
+
+Give the reader a narrow task based on the PR, for example:
+
+> Given this change and its intended behavior, map only the surrounding code
+> needed to understand the changed execution paths. Identify relevant callers,
+> dependencies, architectural boundaries, analogous implementations, and
+> invariants that are not obvious from the diff. Report evidence and uncertainty.
+> Do not review the implementation, produce findings, assign risk, or issue an
+> approval decision.
+
+The reader should return concise evidence covering:
+
+- relevant files and symbols outside the diff;
+- callers and downstream dependencies;
+- boundary crossings and execution flow;
+- established patterns that affect interpretation;
+- invariants, contracts, or assumptions implied by surrounding code;
+- unresolved contradictions or missing context.
+
+The parent session remains responsible for interpreting that evidence, assigning
+review attention, selecting critical flows, and producing the final review
+brief.
+
+If the `codebase-reader` profile cannot be resolved or delegation is
+unavailable, perform the same focused reconnaissance in the parent session.
+Never hard-code a model in this skill.
+
 ## Process
 
 ### 1. Establish expected behavior
