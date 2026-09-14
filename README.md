@@ -39,6 +39,7 @@ reasoning-effort fields in the corresponding files under `opencode/agents/`,
 - **`skills/write-tests/SKILL.md`** - add or update behavior-focused tests at the right level.
 - **`skills/run-verification/SKILL.md`** - run the smallest relevant checks first, then expand as needed.
 - **`skills/code-review/SKILL.md`** - review code for correctness, regressions, architecture fit, and missing tests.
+- **`skills/prepare-pr-review/SKILL.md`** - turn a large PR into a focused human review guide with risk areas, critical flows, reading order, and reviewer questions without duplicating a full code review.
 - **`skills/debug-failure/SKILL.md`** - isolate likely root cause for failing tests, builds, CI, or runtime behavior.
 - **`skills/api-change-checklist/SKILL.md`** - checklist for API or contract changes.
 - **`skills/db-change-checklist/SKILL.md`** - checklist for schema, query, migration, and rollout risk.
