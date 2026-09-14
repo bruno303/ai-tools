@@ -757,8 +757,8 @@ class BenchmarkRunnerTests(unittest.TestCase):
 
     def test_token_qualification_is_independent_of_correctness(self):
         scenario = {"token_target": {"metric": "input_tokens", "minimum": 400_000}}
-        self.assertEqual(benchmark.token_qualification(scenario, {"input_tokens": 400_000})["met"], True)
-        self.assertEqual(benchmark.token_qualification(scenario, {"input_tokens": 1})["met"], False)
+        self.assertTrue(benchmark.token_qualification(scenario, {"input_tokens": 400_000})["met"])
+        self.assertFalse(benchmark.token_qualification(scenario, {"input_tokens": 1})["met"])
         self.assertIsNone(benchmark.token_qualification(scenario, None)["actual"])
 
 

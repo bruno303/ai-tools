@@ -365,10 +365,7 @@ def _validate_fixture_links(source: Path) -> None:
                     raise ValueError(f"fixture symlink escapes checkout: {entry}") from error
 
 
-def _validate_scenario(scenario: dict[str, Any], scenario_dir: Path) -> None:
-    if not isinstance(scenario, dict) or not isinstance(scenario.get("name"), str) or not scenario["name"]:
-        raise ValueError("scenario name must be a non-empty string")
-    fixture = scenario.get("fixture")
+def _validate_fixture_config(fixture: Any, scenario_dir: Path) -> None:
     if isinstance(fixture, str):
         fixture_path = scenario_dir / _safe_relative_path(fixture, "fixture")
         if not fixture_path.exists() or not fixture_path.is_dir():
@@ -381,15 +378,9 @@ def _validate_scenario(scenario: dict[str, Any], scenario_dir: Path) -> None:
         _external_fixture_config(fixture)
     else:
         raise ValueError("fixture must be a relative directory or external fixture object")
-    task = scenario.get("task")
-    task_path = scenario_dir / _safe_relative_path(task, "task")
-    if not task_path.is_file():
-        raise ValueError("task must name an existing file")
-    timeout = scenario.get("timeout_seconds", 900)
-    if isinstance(timeout, bool) or not isinstance(timeout, int) or timeout <= 0:
-        raise ValueError("timeout_seconds must be a positive integer")
-    token_qualification(scenario, None)
-    injections = scenario.get("inject_after_run", [])
+
+
+def _validate_injections(injections: Any, scenario_dir: Path) -> None:
     if not isinstance(injections, list):
         raise ValueError("inject_after_run must be a list")
     for injection in injections:
@@ -399,7 +390,9 @@ def _validate_scenario(scenario: dict[str, Any], scenario_dir: Path) -> None:
         _safe_relative_path(injection.get("destination"), "injection destination")
         if not source.exists():
             raise ValueError("injection source must exist")
-    verification = scenario.get("verification", [])
+
+
+def _validate_verifications(verification: Any, timeout: int) -> None:
     if not isinstance(verification, list):
         raise ValueError("verification must be a list")
     for evaluation in verification:
@@ -411,6 +404,21 @@ def _validate_scenario(scenario: dict[str, Any], scenario_dir: Path) -> None:
         evaluation_timeout = evaluation.get("timeout_seconds", timeout)
         if isinstance(evaluation_timeout, bool) or not isinstance(evaluation_timeout, int) or evaluation_timeout <= 0:
             raise ValueError("verification timeout_seconds must be a positive integer")
+
+
+def _validate_scenario(scenario: dict[str, Any], scenario_dir: Path) -> None:
+    if not isinstance(scenario, dict) or not isinstance(scenario.get("name"), str) or not scenario["name"]:
+        raise ValueError("scenario name must be a non-empty string")
+    _validate_fixture_config(scenario.get("fixture"), scenario_dir)
+    task_path = scenario_dir / _safe_relative_path(scenario.get("task"), "task")
+    if not task_path.is_file():
+        raise ValueError("task must name an existing file")
+    timeout = scenario.get("timeout_seconds", 900)
+    if isinstance(timeout, bool) or not isinstance(timeout, int) or timeout <= 0:
+        raise ValueError("timeout_seconds must be a positive integer")
+    token_qualification(scenario, None)
+    _validate_injections(scenario.get("inject_after_run", []), scenario_dir)
+    _validate_verifications(scenario.get("verification", []), timeout)
 
 
 def token_qualification(scenario: dict[str, Any], usage: dict[str, Any] | None) -> dict[str, Any] | None:
@@ -479,65 +487,60 @@ def _copy_injection_file(source: Path, parent_fd: int, filename: str) -> None:
             pass
 
 
+def _ensure_injection_directory(root_fd: int, target_parts: tuple[str, ...]) -> None:
+    parent_fd, directory_fds = _open_injection_parent(root_fd, target_parts + (".",))
+    try:
+        target_name = target_parts[-1] if target_parts else "."
+        if target_name == ".":
+            return
+        try:
+            target_fd = os.open(target_name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent_fd)
+        except FileNotFoundError:
+            os.mkdir(target_name, dir_fd=parent_fd)
+            target_fd = os.open(target_name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent_fd)
+        directory_fds.append(target_fd)
+    finally:
+        for fd in reversed(directory_fds):
+            os.close(fd)
+
+
+def _copy_injection_directory(source: Path, destination_parts: tuple[str, ...], root_fd: int) -> None:
+    for directory, _, files in os.walk(source, followlinks=False):
+        relative = Path(directory).relative_to(source)
+        target_parts = destination_parts + relative.parts
+        _ensure_injection_directory(root_fd, target_parts)
+        for name in files:
+            parent_fd, fds = _open_injection_parent(root_fd, target_parts + (name,))
+            try:
+                _copy_injection_file(Path(directory) / name, parent_fd, name)
+            finally:
+                for fd in reversed(fds):
+                    os.close(fd)
+
+
+def _inject_entry(source: Path, destination_parts: tuple[str, ...], root_fd: int) -> None:
+    if source.is_dir():
+        _copy_injection_directory(source, destination_parts, root_fd)
+        return
+    parent_fd, fds = _open_injection_parent(root_fd, destination_parts)
+    try:
+        _copy_injection_file(source, parent_fd, destination_parts[-1])
+    finally:
+        for fd in reversed(fds):
+            os.close(fd)
+
+
 def inject_after_run(scenario_dir: Path, workspace: Path, injections: list[dict[str, str]], workspace_fd: int | None = None) -> None:
     owned_fd = workspace_fd is None
     root_fd = workspace_fd if workspace_fd is not None else os.open(workspace, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
-    workspace = workspace.absolute()
     try:
         for injection in injections:
             source = scenario_dir / injection["source"]
-            destination = workspace / injection["destination"]
-            destination_parts = destination.relative_to(workspace).parts
-            if source.is_dir():
-                for directory, directories, files in os.walk(source, followlinks=False):
-                    relative = Path(directory).relative_to(source)
-                    target_parts = destination_parts + relative.parts
-                    parent_fd, directory_fds = _open_injection_parent(root_fd, target_parts + (".",))
-                    try:
-                        target_name = target_parts[-1] if target_parts else "."
-                        if target_name == ".":
-                            target_fd = parent_fd
-                        else:
-                            try:
-                                target_fd = os.open(target_name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent_fd)
-                            except FileNotFoundError:
-                                os.mkdir(target_name, dir_fd=parent_fd)
-                                target_fd = os.open(target_name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=parent_fd)
-                        if target_fd != parent_fd:
-                            directory_fds.append(target_fd)
-                    finally:
-                        for fd in reversed(directory_fds):
-                            os.close(fd)
-                    target_directory = destination / relative
-                    _validate_injection_destination(workspace, target_directory, directory=True)
-                    for name in directories:
-                        _validate_injection_destination(workspace, target_directory / name, directory=True)
-                    for name in files:
-                        target = target_directory / name
-                        _validate_injection_destination(workspace, target)
-                        parent_fd, fds = _open_injection_parent(root_fd, (destination_parts + relative.parts + (name,)))
-                        try:
-                            _copy_injection_file(Path(directory) / name, parent_fd, name)
-                        finally:
-                            for fd in reversed(fds):
-                                os.close(fd)
-            else:
-                parent_fd, fds = _open_injection_parent(root_fd, destination_parts)
-                try:
-                    _copy_injection_file(source, parent_fd, destination_parts[-1])
-                finally:
-                    for fd in reversed(fds):
-                        os.close(fd)
+            destination_parts = Path(injection["destination"]).parts
+            _inject_entry(source, destination_parts, root_fd)
     finally:
         if owned_fd:
             os.close(root_fd)
-
-
-def _validate_injection_destination(workspace: Path, destination: Path, directory: bool = False) -> None:
-    try:
-        destination.relative_to(workspace)
-    except ValueError as error:
-        raise ValueError("injection destination must stay within workspace") from error
 
 
 def collect_usage(variant: dict[str, Any], workspace: Path) -> dict[str, Any] | None:
@@ -687,7 +690,7 @@ def execute_scenario(
 
         try:
             inject_after_run(scenario_dir, workspace, scenario.get("inject_after_run", []), workspace_fd)
-        except (OSError, ValueError, shutil.Error) as error:
+        except (OSError, ValueError) as error:
             result["failure_reason"] = "injection_failed"
             result["injection_error"] = str(error)
             return result
@@ -782,17 +785,17 @@ def command_compare(args: argparse.Namespace) -> int:
             if item.get("usage") and INPUT_TOKENS in item["usage"]
         ]
         median_tokens = str(int(statistics.median(input_tokens))) if input_tokens else "n/a"
-        qualifying = sum(
-            1
-            for item in items
-            if isinstance(item.get("token_qualification") or item.get("qualification"), dict)
-            and (item.get("token_qualification") or item.get("qualification")).get("met") is True
-        )
+        qualifying = sum(_result_qualifies(item) for item in items)
         print(
             f"| {scenario} | {variant} | {len(items)} | {successes / len(items):.0%} | "
             f"{statistics.median(durations):.2f} | {median_tokens} | {qualifying} |"
         )
     return 0
+
+
+def _result_qualifies(result: dict[str, Any]) -> bool:
+    qualification = result.get("token_qualification") or result.get("qualification")
+    return isinstance(qualification, dict) and qualification.get("met") is True
 
 
 def build_parser() -> argparse.ArgumentParser:
