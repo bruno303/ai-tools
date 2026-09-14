@@ -60,15 +60,39 @@ python3 benchmarks/benchmark.py run \
   benchmarks/variants/local.json
 ```
 
-Run multiple scenarios sequentially with the same variant. Scenario arguments
-may be `scenario.json` files or directories containing one; the final
-positional argument is always the variant:
+Run regular scenarios through the Make target; it intentionally excludes the
+expensive Django fixture:
+
+```bash
+make benchmark-all
+```
+
+Do not use a broad `benchmarks/scenarios/*/scenario.json` glob: it can launch
+the costly Django benchmark. To run selected scenarios directly, name them
+explicitly (scenario arguments may also be directories):
 
 ```bash
 python3 benchmarks/benchmark.py run \
-  benchmarks/scenarios/*/scenario.json \
+  benchmarks/scenarios/normalize-username/scenario.json \
+  benchmarks/scenarios/fix-invoice-total/scenario.json \
   benchmarks/variants/local.json
 ```
+
+For the Django scenario, opt in with `make benchmark-large` or name it
+explicitly in a direct runner command:
+
+```bash
+make benchmark-large VARIANT=benchmarks/variants/local.json
+python3 benchmarks/benchmark.py run \
+  benchmarks/scenarios/django-complex-change/scenario.json \
+  benchmarks/variants/local.json
+```
+
+`SCENARIOS` overrides the regular set used by `benchmark-all`; it does not
+change `benchmark-large`. Use `LARGE_SCENARIO` to change the single scenario
+used by `benchmark-large`. `VARIANT`, `REPEAT`, `RESULTS_DIR`, and
+`BENCHMARK_ARGS` are also overridable. `make benchmark` remains the
+starter-scenario target.
 
 Run it five times:
 
@@ -143,6 +167,47 @@ child processes, before the next execution.
 
 `inject_after_run` happens only after the agent command exits. This keeps hidden evaluators outside the workspace while the model is solving the task.
 
+The runner also accepts an external Git fixture. Its configuration must use a
+URL and a full 40-character commit SHA; a tag, branch, or abbreviated SHA is
+rejected. For example:
+
+```json
+{
+  "name": "django-complex-change",
+  "fixture": {
+    "url": "https://github.com/django/django.git",
+    "commit": "467aeeb569da17a7573e8dfc4932434c84e70642"
+  },
+  "task": "task.md",
+  "timeout_seconds": 1800,
+  "token_target": {"metric": "input_tokens", "minimum": 400000},
+  "inject_after_run": [{"source": "hidden-tests/test_hidden.py", "destination": "test_hidden.py"}],
+  "verification": [{"name": "hidden behavioral tests", "command": "python3 -m unittest test_hidden -v"}]
+}
+```
+
+For a repository shipped with the scenario, use a relative fixture directory,
+for example `"fixture": "fixture"`. External checkouts are cached under
+`$BENCHMARK_FIXTURE_CACHE`, defaulting to `~/.cache/ai-tools-benchmark/`. The
+cache key includes the URL and commit, and the runner verifies that both the
+requested object and `HEAD` match the pinned commit and that the worktree is
+clean before reuse. Cache publication uses an OS-level lock that is released
+automatically if a process terminates. Remove an entry or the whole cache when
+it should be refetched; the runner publishes repaired checkouts through a temporary
+directory. External fixture cloning and checkout
+failures are reported as `failure_reason: "fixture_setup_failed"` with
+`fixture_error`. Do not run external fixtures without network access, and
+review their provenance and license before use: a Git SHA makes the source
+reproducible, not necessarily safe or licensed for every purpose.
+
+Injection destinations are checked immediately before copying and must remain
+inside the workspace without symlink traversal. A rejected or failed hidden-test
+injection produces `failure_reason: "injection_failed"` and `injection_error`;
+verification commands are not run after such a failure. The runner retains an
+open workspace descriptor across the agent process and uses descriptor-relative,
+atomic replacement for injected files, so workspace replacement and existing
+hard links cannot redirect hidden-test writes.
+
 Verification should test behavior rather than prescribe a specific implementation. Avoid assertions about exact file structure unless file placement is part of the requirement.
 
 ## Variant format
@@ -201,6 +266,30 @@ A useful usage payload is:
 ```
 
 Usage collection is optional because different harnesses expose telemetry differently.
+
+### Token targets and result semantics
+
+`token_target` currently supports the `input_tokens` metric and a non-negative
+`minimum`. The runner records the result as `token_qualification` (and the
+backward-compatible `qualification`) with `metric`, `minimum`, `actual`, and
+`met`. Missing usage, missing `input_tokens`, or a run below the minimum means
+the run does not qualify; it is not a correctness failure. Correctness
+`success` is independent: it is true when the command exits successfully and
+all verification commands pass, regardless of whether a token target was met.
+For the Django scenario, the 400,000-input-token target is a qualification
+threshold, while its 1,800-second timeout describes the possible runtime and
+why it is opt-in—not a promise that every run consumes exactly that many tokens
+or lasts that long.
+
+When a result is compared, the Markdown table reports runs, success rate,
+median duration, median input tokens (or `n/a` when unavailable), and
+qualifying runs. Raw results preserve usage fields such as
+`cached_input_tokens`, `output_tokens`, `model_calls`, and `subagent_calls`.
+For an external fixture, `fixture_provenance` records its `url` and normalized
+full `commit` SHA on successful setup (and during configuration validation).
+Configuration failures use `scenario_configuration_failed` with
+`scenario_error`; fixture I/O failures use `fixture_setup_failed` with
+`fixture_error`.
 
 Treat usage metrics as cost signals alongside success rate and duration. The
 runner reports median `input_tokens` in `compare`; raw result JSON also
