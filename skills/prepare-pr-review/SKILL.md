@@ -2,20 +2,20 @@
 name: prepare-pr-review
 description: >-
   Prepare a focused human review guide for a pull request or completed code
-  change. Use when the implementation has already been reviewed or verified and
-  a human reviewer needs to know where to spend attention. Map risk, critical
-  flows, important decisions, suggested reading order, and reviewer questions
-  without duplicating a full code review or issuing an approval decision.
+  change. Use when implementation has already been reviewed or verified and a
+  human needs to know where to spend attention. Map risk, critical flows,
+  important decisions, reading order, and reviewer questions without duplicating
+  a full code review or issuing an approval decision.
 ---
 
 # Prepare PR Review
 
-Turn a large pull request or completed change into a concise map of where human
-review attention is most valuable.
+Turn a large pull request into a concise map of where human review attention is
+most valuable.
 
-This skill is not another code reviewer. Its job is to reduce the amount of code
-a human must read line-by-line while preserving attention on the decisions and
-execution paths most likely to matter.
+This skill is not another code reviewer. It should help a reviewer inspect the
+important decisions and execution paths without reading every changed line with
+equal depth.
 
 ## Goal
 
@@ -23,83 +23,68 @@ Answer:
 
 > Where should a human reviewer spend attention, and what should they verify?
 
-The output should let a reviewer understand the change, inspect the highest-risk
-parts first, and deliberately skim low-risk or mechanical parts.
-
 ## Use When
 
 Use this skill when:
 
-- a pull request is ready for human review;
+- a PR or completed change is ready for human review;
 - the change is too large to read every line with equal attention;
-- automated checks or another review step have already handled general code
-  quality and correctness;
-- the reviewer wants a prioritized reading guide instead of another list of
-  findings.
+- normal code review, tests, static analysis, or other verification have already
+  covered general correctness and quality;
+- the reviewer wants a prioritized reading guide rather than another findings
+  report.
 
-Do not use this skill as a replacement for:
+Do not use it as a replacement for `code-review`, tests, static analysis, or a
+specialized security review.
 
-- `code-review`;
-- tests, static analysis, or other verification;
-- security review when the change requires one;
-- understanding an implementation that is still actively being designed.
-
-## Core Boundary
+## Boundary
 
 Do not perform a second full code review.
 
-Specifically, do not:
+Do not:
 
-- produce an Approve / Request changes decision;
-- manufacture findings;
-- repeat lint, style, naming, or generic maintainability comments;
+- issue Approve / Request changes decisions;
 - exhaustively inspect every changed line;
-- claim that low-risk code is guaranteed correct;
-- treat test or static-analysis success as proof of semantic correctness.
+- repeat style, lint, naming, or generic maintainability comments;
+- manufacture findings to appear thorough;
+- treat passing checks as proof of semantic correctness;
+- claim that low-risk code is guaranteed correct.
 
-If a serious defect becomes obvious while preparing the guide, surface it
-briefly as a blocking observation rather than hiding it, but do not turn the
-rest of the output into a normal code review.
+If an obvious serious defect appears while preparing the guide, mention it
+briefly as a blocking observation, then continue producing the review guide.
 
-## Evidence to Gather
+## Evidence
 
-Start with the strongest available evidence:
+Use the strongest available evidence:
 
 1. Task, issue, PR description, RFC, or implementation plan.
 2. Changed files and diff.
-3. `AGENTS.md`, `CLAUDE.md`, and relevant repository guidance.
+3. Relevant `AGENTS.md`, `CLAUDE.md`, and repository guidance.
 4. Relevant tests and public contracts.
 5. Surrounding code needed to understand changed execution paths.
-6. Existing analogous code when it clarifies risk or intent.
+6. Analogous existing code when it clarifies intent or risk.
 
-Do not explore the repository broadly without a concrete reason.
-
-If requirements and implementation evidence conflict, call out the conflict as
-something the human reviewer must resolve.
+Inspect only enough repository context to understand the change.
 
 ## Process
 
-### 1. Establish Expected Behavior
+### 1. Establish expected behavior
 
-Briefly derive:
+Briefly identify:
 
 - what the change is intended to accomplish;
-- externally visible or domain-visible behavior that changes;
-- important invariants or guarantees;
-- important failure behavior, when relevant.
+- important behavior that changes;
+- invariants or guarantees that matter to review;
+- meaningful failure behavior.
 
-Keep this short. The purpose is to create a review lens, not restate the entire
-task.
+Do not restate the whole task.
 
-### 2. Partition the Change by Responsibility
+### 2. Group the change by responsibility
 
-Group changed files by meaningful responsibility or flow rather than listing
-every file independently.
+Group changed files into meaningful areas such as:
 
-Examples:
-
-- domain and application behavior;
-- HTTP or RPC boundary;
+- domain/application behavior;
+- API boundary;
 - persistence;
 - external integration;
 - background processing;
@@ -108,36 +93,34 @@ Examples:
 - configuration;
 - generated or mechanical changes.
 
-Prefer groups that help a reviewer reason about behavior.
+Prefer behavioral groups over a flat file list.
 
-### 3. Assign Review Attention
+### 3. Assign review attention
 
 Classify each meaningful group as:
 
 #### HIGH
 
-Human review should inspect this carefully.
+Review carefully when the area changes things such as:
 
-Typical reasons include:
-
-- business or domain behavior changes;
+- business or domain behavior;
 - state transitions;
 - concurrency, transactions, retries, or idempotency;
 - authorization or security boundaries;
 - persistence semantics or migrations;
 - external contracts;
-- failure handling with meaningful production impact;
-- architectural boundaries or dependency direction;
+- meaningful failure handling;
+- architecture boundaries or dependency direction;
 - non-obvious cross-component behavior.
 
 #### MEDIUM
 
 Read enough to confirm integration and assumptions.
 
-Typical examples include:
+Typical examples:
 
 - ordinary application wiring;
-- repository implementation changes with established patterns;
+- repository implementation changes following established patterns;
 - validation;
 - adapters;
 - non-trivial configuration;
@@ -145,9 +128,9 @@ Typical examples include:
 
 #### LOW / SKIM
 
-Normally suitable for deliberate skimming rather than line-by-line review.
+Normally suitable for deliberate skimming instead of line-by-line review.
 
-Typical examples include:
+Typical examples:
 
 - mechanical renames;
 - repetitive mappings;
@@ -157,14 +140,14 @@ Typical examples include:
 - lockfiles;
 - boilerplate following an established pattern.
 
-Always explain why something is low risk. Never use the classification as a
-guarantee that the code cannot contain defects.
+Always explain the classification. Low risk means lower review priority, not
+guaranteed correctness.
 
-### 4. Trace Critical Flows
+### 4. Trace critical flows
 
-Identify the small number of end-to-end flows that best represent the feature.
+Identify the small number of end-to-end paths that best represent the feature.
 
-For each flow, show the relevant path, for example:
+Example:
 
 ```text
 HTTP handler
@@ -174,35 +157,30 @@ HTTP handler
   -> event publication
 ```
 
-Mention the changed files or symbols involved.
+Include the changed files or symbols involved. Prioritize boundary crossings and
+paths where partial failure could create inconsistent state.
 
-Prioritize flows where behavior crosses boundaries or where partial failure can
-create inconsistent state.
+### 5. Surface decisions worth human judgment
 
-### 5. Identify Decisions Worth Human Judgment
+Highlight only meaningful decisions the reviewer should consciously validate,
+for example:
 
-Surface design or behavioral decisions a human reviewer should consciously
-validate, such as:
-
-- why a responsibility lives in a particular layer;
+- responsibility placement;
 - transaction or side-effect ordering;
-- retry semantics;
+- retry or idempotency semantics;
 - API compatibility;
 - failure behavior;
 - persistence guarantees;
-- newly introduced abstraction boundaries;
+- new abstraction boundaries;
 - deviations from existing project patterns.
 
-Do not invent decisions just to fill the section.
+Do not invent decisions to fill the section.
 
-### 6. Build a Reading Order
+### 6. Build a reading order
 
-Recommend a short review sequence.
+Recommend the smallest useful sequence of files, symbols, or diff ranges.
 
-Start with the files or symbols that establish behavior, then follow the most
-important dependencies.
-
-Prefer:
+Example:
 
 ```text
 1. application/task_runner.go - lifecycle and ordering
@@ -211,57 +189,55 @@ Prefer:
 4. tests/... - expected edge cases
 ```
 
-over a raw list of every changed file.
+Start with code that establishes behavior, then follow its important
+dependencies. Include line ranges when available.
 
-When line ranges are available, include them.
+### 7. Prepare reviewer questions
 
-### 7. Prepare Reviewer Questions
+Turn the highest-value assumptions and risks into concrete questions the human
+reviewer should be able to answer before merging.
 
-Turn the highest-value uncertainties into concrete questions the reviewer should
-be able to answer before merging.
-
-Good questions challenge assumptions or connect multiple parts of the change:
+Examples:
 
 - Can two executions select the same work concurrently?
-- What happens after a successful external side effect followed by a failed
-  persistence update?
-- Does validation allow a state that downstream code rejects?
+- What happens after a successful side effect followed by a failed write?
+- Does validation allow a state downstream code rejects?
 - Why does this responsibility belong in this layer?
-- Does the test suite actually protect the invariant described by the task?
+- Do the tests actually protect the important invariant?
 
 Avoid generic questions such as "Is this code readable?"
 
-## Output Format
+## Output
 
-Use this structure and omit empty sections.
+Use this structure and omit empty sections:
 
 ### PR review brief
 
 #### What changed
-A concise behavioral summary.
+Concise behavioral summary.
 
 #### Invariants and expected behavior
-Only the guarantees that materially guide review.
+Only guarantees that materially guide review.
 
 #### Attention map
-Group code by `HIGH`, `MEDIUM`, and `LOW / SKIM`, with a short reason for
+Group areas under `HIGH`, `MEDIUM`, and `LOW / SKIM`, with a reason for
 each classification.
 
 #### Critical flows
-Show the most important end-to-end paths through the change.
+Show the most important end-to-end paths.
 
 #### Decisions to validate
-List only meaningful architecture, behavior, reliability, or contract decisions.
+List meaningful behavior, architecture, reliability, or contract decisions.
 
 #### Suggested reading order
 Provide the smallest useful ordered set of files, symbols, or diff ranges.
 
 #### Reviewer questions
-Provide a focused set of questions, normally 3-10 depending on change size.
+Provide a focused set, normally 3-10 depending on change size.
 
 #### Blocking observation
-Include only when an obvious serious defect or requirement conflict was
-encountered while preparing the guide.
+Include only when an obvious serious defect or requirement conflict appeared
+while preparing the guide.
 
 ## Principles
 
@@ -269,10 +245,8 @@ encountered while preparing the guide.
 - Prefer behavior and decisions over file count.
 - Treat risk as contextual, not as a numeric score.
 - Explain why an area deserves deep review or only a skim.
-- Keep the guide substantially smaller than the diff it describes.
+- Keep the guide substantially smaller than the diff.
 - Use repository evidence rather than generic best practices.
 - Distinguish facts from assumptions.
 - Do not duplicate `code-review`.
 - Do not issue an approval decision.
-- A useful result may intentionally tell the reviewer to deeply read only a
-  small fraction of the changed lines.
