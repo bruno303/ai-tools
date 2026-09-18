@@ -88,6 +88,10 @@ python3 benchmarks/benchmark.py run \
   benchmarks/variants/local.json
 ```
 
+Its HTTP-only verification uses narrow, scenario-local import-time compatibility
+stubs for missing `asgiref` and `sqlparse`; it does not install the external
+fixture's full optional dependency set.
+
 `SCENARIOS` overrides the regular set used by `benchmark-all`; it does not
 change `benchmark-large`. Use `LARGE_SCENARIO` to change the single scenario
 used by `benchmark-large`. `VARIANT`, `REPEAT`, `RESULTS_DIR`, and
@@ -179,7 +183,7 @@ rejected. For example:
     "commit": "467aeeb569da17a7573e8dfc4932434c84e70642"
   },
   "task": "task.md",
-  "timeout_seconds": 1800,
+  "timeout_seconds": 7200,
   "token_target": {"metric": "input_tokens", "minimum": 400000},
   "inject_after_run": [{"source": "hidden-tests/test_hidden.py", "destination": "test_hidden.py"}],
   "verification": [{"name": "hidden behavioral tests", "command": "python3 -m unittest test_hidden -v"}]

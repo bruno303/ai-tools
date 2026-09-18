@@ -635,6 +635,114 @@ class BenchmarkRunnerTests(unittest.TestCase):
                 self.assertIn("setup", result)
                 self.assertIn("duration_seconds", result)
 
+    def test_django_scenario_injects_dependency_bootstrap_for_upstream_tests(self):
+        scenario_path = ROOT / "benchmarks" / "scenarios" / "django-complex-change" / "scenario.json"
+        scenario = benchmark.load_json(scenario_path)
+        injections = {item["source"]: item["destination"] for item in scenario["inject_after_run"]}
+        self.assertEqual(injections["hidden-tests/dependency_stubs.py"], "dependency_stubs.py")
+        self.assertEqual(injections["hidden-tests/run_unittest.py"], "run_unittest.py")
+        self.assertEqual(
+            scenario["verification"][0]["command"],
+            "python3 run_unittest.py -v tests.requests_tests.test_accept_header",
+        )
+
+    def test_django_dependency_bootstrap_supplies_missing_optional_imports(self):
+        hidden_tests = ROOT / "benchmarks" / "scenarios" / "django-complex-change" / "hidden-tests"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "asgiref").mkdir()
+            (root / "asgiref" / "__init__.py").write_text(
+                "raise ModuleNotFoundError('asgiref blocked for regression test')\n",
+                encoding="utf-8",
+            )
+            (root / "sqlparse.py").write_text(
+                "raise ModuleNotFoundError('sqlparse blocked for regression test')\n",
+                encoding="utf-8",
+            )
+            (root / "smoke_test.py").write_text(
+                "import unittest\n"
+                "class Smoke(unittest.TestCase):\n"
+                "    def test_bootstrap_started(self):\n"
+                "        self.assertIsNotNone(__import__('asgiref.sync'))\n"
+                "        self.assertIsNotNone(__import__('sqlparse'))\n",
+                encoding="utf-8",
+            )
+            completed = subprocess.run(
+                [sys.executable, str(hidden_tests / "run_unittest.py"), "-v", "smoke_test"],
+                cwd=directory,
+                env={"PATH": os.environ["PATH"], "PYTHONPATH": os.pathsep.join((directory, str(hidden_tests)))},
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("test_bootstrap_started", completed.stderr)
+        self.assertIn("OK", completed.stderr)
+
+    def test_django_dependency_bootstrap_configures_http_request_settings(self):
+        hidden_tests = ROOT / "benchmarks" / "scenarios" / "django-complex-change" / "hidden-tests"
+        with tempfile.TemporaryDirectory() as directory:
+            django = Path(directory, "django")
+            django.mkdir()
+            (django / "__init__.py").write_text("", encoding="utf-8")
+            (django / "conf.py").write_text(
+                "class Settings:\n"
+                "    configured = False\n"
+                "    def configure(self, **values):\n"
+                "        self.__dict__.update(values)\n"
+                "        self.configured = True\n"
+                "settings = Settings()\n",
+                encoding="utf-8",
+            )
+            (django / "http.py").write_text(
+                "from .conf import settings\n"
+                "class HttpRequest:\n"
+                "    def __init__(self):\n"
+                "        self.encoding = settings.DEFAULT_CHARSET\n",
+                encoding="utf-8",
+            )
+            Path(directory, "http_request_smoke.py").write_text(
+                "import unittest\n"
+                "from django.http import HttpRequest\n"
+                "class Smoke(unittest.TestCase):\n"
+                "    def test_http_request_uses_bootstrap_settings(self):\n"
+                "        self.assertEqual(HttpRequest().encoding, 'utf-8')\n",
+                encoding="utf-8",
+            )
+            completed = subprocess.run(
+                [sys.executable, str(hidden_tests / "run_unittest.py"), "-v", "http_request_smoke"],
+                cwd=directory,
+                env={**os.environ, "PYTHONPATH": os.pathsep.join((str(directory), str(hidden_tests)))},
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("test_http_request_uses_bootstrap_settings", completed.stderr)
+        self.assertIn("OK", completed.stderr)
+
+    def test_django_unittest_bootstrap_preserves_real_test_failures(self):
+        hidden_tests = ROOT / "benchmarks" / "scenarios" / "django-complex-change" / "hidden-tests"
+        with tempfile.TemporaryDirectory() as directory:
+            broken = Path(directory) / "broken_test.py"
+            broken.write_text(
+                "import unittest\n"
+                "class Broken(unittest.TestCase):\n"
+                "    def test_failure(self):\n"
+                "        self.fail('intentional')\n",
+                encoding="utf-8",
+            )
+            completed = subprocess.run(
+                [sys.executable, str(hidden_tests / "run_unittest.py"), "-v", "broken_test"],
+                cwd=directory,
+                env={**os.environ, "PYTHONPATH": os.pathsep.join((str(directory), str(hidden_tests)))},
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        self.assertNotEqual(completed.returncode, 0)
+        self.assertIn("intentional", completed.stderr)
+
     def test_failure_result_has_failure_reason(self):
         with tempfile.TemporaryDirectory() as directory, tempfile.TemporaryDirectory() as results:
             root = Path(directory)

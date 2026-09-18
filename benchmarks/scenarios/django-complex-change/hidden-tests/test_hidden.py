@@ -1,40 +1,12 @@
-import inspect
-import sys
-import types
 import unittest
 
+from dependency_stubs import configure_django_settings, install_dependency_stubs
 
-# The benchmark runner intentionally does not install optional fixture
-# dependencies. Supply only the small import-time compatibility surface needed
-# by this HTTP-only test when asgiref is unavailable.
-try:
-    import asgiref.sync  # noqa: F401
-except ModuleNotFoundError:
-    asgiref = types.ModuleType("asgiref")
-    sync = types.ModuleType("asgiref.sync")
-    sync.iscoroutinefunction = inspect.iscoroutinefunction
-    sync.markcoroutinefunction = lambda function: function
-    sync.sync_to_async = lambda function=None, **kwargs: function
-    sync.async_to_sync = lambda function=None, **kwargs: function
-    asgiref.sync = sync
-    local = types.ModuleType("asgiref.local")
-    local.Local = type("Local", (), {"__init__": lambda self, *args, **kwargs: None})
-    asgiref.local = local
-    sys.modules["asgiref"] = asgiref
-    sys.modules["asgiref.sync"] = sync
-    sys.modules["asgiref.local"] = local
 
-try:
-    import sqlparse  # noqa: F401
-except ModuleNotFoundError:
-    sys.modules["sqlparse"] = types.ModuleType("sqlparse")
+install_dependency_stubs()
+configure_django_settings()
 
-from django.conf import settings
 from django.http import HttpRequest
-
-
-if not settings.configured:
-    settings.configure(DEFAULT_CHARSET="utf-8")
 
 
 def request_with_accept(value):
