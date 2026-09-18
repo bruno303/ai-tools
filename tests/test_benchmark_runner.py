@@ -1,9 +1,11 @@
 import argparse
+import errno
 import json
 import contextlib
 import io
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import time
@@ -198,6 +200,363 @@ class BenchmarkRunnerTests(unittest.TestCase):
         path.write_text(json.dumps({"name": name, "command": command}), encoding="utf-8")
         return path
 
+    def make_git_fixture(self, root):
+        fixture = root / "source"
+        fixture.mkdir()
+        (fixture / "tracked.txt").write_text("original", encoding="utf-8")
+        (fixture / ".gitignore").write_text("ignored.txt\n", encoding="utf-8")
+        subprocess = benchmark.subprocess
+        subprocess.run(["git", "init", "-q"], cwd=fixture, check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.name", "test"], cwd=fixture, check=True)
+        subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=fixture, check=True)
+        subprocess.run(["git", "add", "."], cwd=fixture, check=True)
+        subprocess.run(["git", "commit", "-qm", "fixture"], cwd=fixture, check=True)
+        revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=fixture, text=True).strip()
+        return fixture, revision
+
+    def test_external_fixture_is_pinned_cached_and_keeps_source_immutable(self):
+        if shutil.which("git") is None:
+            self.skipTest("git not available")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, revision = self.make_git_fixture(root)
+            cache = root / "cache"
+            with unittest.mock.patch.dict(os.environ, {"BENCHMARK_FIXTURE_CACHE": str(cache)}):
+                checkout, provenance = benchmark.materialize_external_fixture({"url": str(source), "commit": revision})
+                first_mtime = checkout.stat().st_mtime_ns
+                reused, _ = benchmark.materialize_external_fixture({"url": str(source), "commit": revision})
+            self.assertEqual(checkout, reused)
+            self.assertEqual(reused.stat().st_mtime_ns, first_mtime)
+            self.assertEqual(benchmark.subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=reused, text=True).strip(), revision)
+            (reused / "tracked.txt").write_text("cache should remain immutable", encoding="utf-8")
+            self.assertEqual((source / "tracked.txt").read_text(encoding="utf-8"), "original")
+            self.assertEqual(provenance, {"url": str(source), "commit": revision})
+
+    def test_external_fixture_rebuilds_dirty_cached_checkout(self):
+        if shutil.which("git") is None:
+            self.skipTest("git not available")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, revision = self.make_git_fixture(root)
+            cache = root / "cache"
+            with unittest.mock.patch.dict(os.environ, {"BENCHMARK_FIXTURE_CACHE": str(cache)}):
+                checkout, _ = benchmark.materialize_external_fixture({"url": str(source), "commit": revision})
+                (checkout / "tracked.txt").unlink()
+                (checkout / "untracked.txt").write_text("dirty", encoding="utf-8")
+                rebuilt, _ = benchmark.materialize_external_fixture({"url": str(source), "commit": revision})
+            self.assertEqual(rebuilt, checkout)
+            self.assertEqual((rebuilt / "tracked.txt").read_text(encoding="utf-8"), "original")
+            self.assertFalse((rebuilt / "untracked.txt").exists())
+            self.assertTrue(benchmark._verify_pinned_checkout(rebuilt, revision))
+
+    def test_external_fixture_rebuilds_modified_tracked_cached_checkout(self):
+        if shutil.which("git") is None:
+            self.skipTest("git not available")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, revision = self.make_git_fixture(root)
+            cache = root / "cache"
+            with unittest.mock.patch.dict(os.environ, {"BENCHMARK_FIXTURE_CACHE": str(cache)}):
+                checkout, _ = benchmark.materialize_external_fixture({"url": str(source), "commit": revision})
+                (checkout / "tracked.txt").write_text("tampered", encoding="utf-8")
+                self.assertFalse(benchmark._verify_pinned_checkout(checkout, revision))
+                rebuilt, _ = benchmark.materialize_external_fixture({"url": str(source), "commit": revision})
+            self.assertEqual((rebuilt / "tracked.txt").read_text(encoding="utf-8"), "original")
+            self.assertTrue(benchmark._verify_pinned_checkout(rebuilt, revision))
+
+    def test_external_fixture_rebuilds_ignored_dirty_cached_checkout(self):
+        if shutil.which("git") is None:
+            self.skipTest("git not available")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, revision = self.make_git_fixture(root)
+            cache = root / "cache"
+            with unittest.mock.patch.dict(os.environ, {"BENCHMARK_FIXTURE_CACHE": str(cache)}):
+                checkout, _ = benchmark.materialize_external_fixture({"url": str(source), "commit": revision})
+                (checkout / "ignored.txt").write_text("dirty", encoding="utf-8")
+                rebuilt, _ = benchmark.materialize_external_fixture({"url": str(source), "commit": revision})
+            self.assertFalse((rebuilt / "ignored.txt").exists())
+            self.assertTrue(benchmark._verify_pinned_checkout(rebuilt, revision))
+
+    def test_external_fixture_concurrent_dirty_repairs_publish_valid_checkout(self):
+        if shutil.which("git") is None:
+            self.skipTest("git not available")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, revision = self.make_git_fixture(root)
+            cache = root / "cache"
+            with unittest.mock.patch.dict(os.environ, {"BENCHMARK_FIXTURE_CACHE": str(cache)}):
+                checkout, _ = benchmark.materialize_external_fixture({"url": str(source), "commit": revision})
+            (checkout / "tracked.txt").write_text("dirty", encoding="utf-8")
+            script = (
+                "import os, sys; sys.path.insert(0, os.environ['BENCHMARK_ROOT']); "
+                "import benchmark; benchmark.materialize_external_fixture({'url': os.environ['SOURCE'], 'commit': os.environ['REVISION']})"
+            )
+            env = os.environ.copy()
+            env.update({"BENCHMARK_ROOT": str(ROOT / "benchmarks"), "BENCHMARK_FIXTURE_CACHE": str(cache), "SOURCE": str(source), "REVISION": revision})
+            processes = [subprocess.Popen([sys.executable, "-c", script], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE) for _ in range(2)]
+            for process in processes:
+                stdout, stderr = process.communicate(timeout=30)
+                self.assertEqual(process.returncode, 0, (stdout, stderr))
+            self.assertTrue(benchmark._verify_pinned_checkout(checkout, revision))
+
+    def test_external_fixture_rejects_annotated_tag_object_and_bad_revision(self):
+        if shutil.which("git") is None:
+            self.skipTest("git not available")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, revision = self.make_git_fixture(root)
+            benchmark.subprocess.run(["git", "tag", "-a", "release", "-m", "release"], cwd=source, check=True)
+            tag_object = benchmark.subprocess.check_output(["git", "rev-parse", "release"], cwd=source, text=True).strip()
+            with unittest.mock.patch.dict(os.environ, {"BENCHMARK_FIXTURE_CACHE": str(root / "cache")}):
+                with self.assertRaises(ValueError):
+                    benchmark.materialize_external_fixture({"url": str(source), "commit": "not-a-sha"})
+                with self.assertRaises(RuntimeError):
+                    benchmark.materialize_external_fixture({"url": str(source), "commit": tag_object})
+            self.assertEqual(len(revision), 40)
+
+    def test_external_fixture_cache_publication_reuses_synchronized_winner(self):
+        if shutil.which("git") is None:
+            self.skipTest("git not available")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, revision = self.make_git_fixture(root)
+            cache = root / "cache"
+            original_replace = Path.replace
+
+            def publish_winner(temporary, destination):
+                shutil.copytree(temporary, destination)
+                raise OSError(errno.ENOTEMPTY, "destination exists")
+
+            with unittest.mock.patch.dict(os.environ, {"BENCHMARK_FIXTURE_CACHE": str(cache)}), unittest.mock.patch.object(
+                Path, "replace", publish_winner
+            ):
+                checkout, _ = benchmark.materialize_external_fixture({"url": str(source), "commit": revision})
+            self.assertTrue((checkout / "tracked.txt").exists())
+            self.assertEqual(original_replace, Path.replace)
+
+    def test_fixture_copy_preserves_internal_links_and_rejects_host_links(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            scenario = self.make_scenario(root, "links", [])
+            fixture = scenario.parent / "fixture"
+            (fixture / "inside.txt").write_text("inside", encoding="utf-8")
+            (fixture / "inside-link").symlink_to("inside.txt")
+            outside = root / "outside.txt"
+            outside.write_text("secret", encoding="utf-8")
+            (fixture / "outside-link").symlink_to(outside)
+            variant = self.make_variant(root, "variant", [sys.executable, "-c", "pass"])
+            result = benchmark.execute_scenario(scenario, variant)
+            self.assertEqual(result["failure_reason"], "fixture_setup_failed")
+            self.assertIn("escapes checkout", result["fixture_error"])
+
+            (fixture / "outside-link").unlink()
+            result = benchmark.execute_scenario(scenario, variant, keep_workspace=True)
+            self.assertTrue(result["success"])
+            workspace = Path(result["workspace"])
+            self.assertTrue((workspace / "inside-link").is_symlink())
+            self.assertEqual((workspace / "inside-link").read_text(encoding="utf-8"), "inside")
+            shutil.rmtree(workspace.parent, ignore_errors=True)
+
+    def test_injection_symlink_failure_is_recorded_without_verification(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            scenario = self.make_scenario(root, "unsafe-injection", [], verification=[{
+                "name": "must-not-run",
+                "command": [sys.executable, "-c", "raise SystemExit(99)"],
+            }], hidden=True)
+            outside = root / "outside.txt"
+            outside.write_text("safe", encoding="utf-8")
+            variant = self.make_variant(root, "variant", [
+                sys.executable, "-c",
+                f"from pathlib import Path; Path('hidden.txt').symlink_to(r'{outside}')",
+            ])
+            result = benchmark.execute_scenario(scenario, variant)
+            self.assertEqual(result["failure_reason"], "injection_failed")
+            self.assertEqual(result["evaluations"], [])
+            self.assertEqual(outside.read_text(encoding="utf-8"), "safe")
+
+    def test_injection_replaces_hardlink_without_modifying_external_target(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            scenario = self.make_scenario(root, "hardlink-injection", [], hidden=True)
+            outside = root / "outside.txt"
+            outside.write_text("safe", encoding="utf-8")
+            variant = self.make_variant(root, "variant", [
+                sys.executable, "-c",
+                f"from pathlib import Path; Path('hidden.txt').hardlink_to(r'{outside}')",
+            ])
+            result = benchmark.execute_scenario(scenario, variant)
+            self.assertTrue(result["success"], result.get("injection_error"))
+            self.assertEqual(outside.read_text(encoding="utf-8"), "safe")
+
+    def test_injection_keeps_trusted_workspace_when_agent_replaces_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            scenario = self.make_scenario(root, "replaced-workspace", [], hidden=True)
+            outside = root / "outside"
+            outside.mkdir()
+            moved = root / "moved-workspace"
+            variant = self.make_variant(root, "variant", [
+                sys.executable, "-c",
+                f"from pathlib import Path; p=Path(r'{{workspace}}'); p.rename(r'{moved}'); p.symlink_to(r'{outside}', target_is_directory=True)",
+            ])
+            result = benchmark.execute_scenario(scenario, variant, keep_workspace=True)
+            self.assertTrue(result["success"], result.get("injection_error"))
+            self.assertTrue((moved / "hidden.txt").exists())
+            self.assertFalse((outside / "hidden.txt").exists())
+            Path(result["workspace"]).unlink(missing_ok=True)
+            shutil.rmtree(moved, ignore_errors=True)
+            shutil.rmtree(Path(result["workspace"]).parent, ignore_errors=True)
+
+    def test_injection_symlink_parent_failure_is_recorded_without_verification(self):
+        with tempfile.TemporaryDirectory() as directory, tempfile.TemporaryDirectory() as external:
+            root = Path(directory)
+            scenario = self.make_scenario(root, "unsafe-parent", [], verification=[{
+                "name": "must-not-run",
+                "command": [sys.executable, "-c", "raise SystemExit(99)"],
+            }], hidden=True)
+            outside = Path(external) / "hidden.txt"
+            outside.write_text("safe", encoding="utf-8")
+            variant = self.make_variant(root, "variant", [
+                sys.executable, "-c",
+                f"from pathlib import Path; p=Path('nested'); p.symlink_to(r'{external}', target_is_directory=True)",
+            ])
+            data = benchmark.load_json(scenario)
+            data["inject_after_run"][0]["destination"] = "nested/hidden.txt"
+            scenario.write_text(json.dumps(data), encoding="utf-8")
+            result = benchmark.execute_scenario(scenario, variant)
+            self.assertEqual(result["failure_reason"], "injection_failed")
+            self.assertEqual(result["evaluations"], [])
+            self.assertEqual(outside.read_text(encoding="utf-8"), "safe")
+
+    def test_directory_injection_nested_symlink_failure_is_recorded_without_verification(self):
+        with tempfile.TemporaryDirectory() as directory, tempfile.TemporaryDirectory() as external:
+            root = Path(directory)
+            scenario = self.make_scenario(root, "unsafe-overlay", [], verification=[{
+                "name": "must-not-run",
+                "command": [sys.executable, "-c", "raise SystemExit(99)"],
+            }])
+            source = scenario.parent / "hidden-dir"
+            nested = source / "nested"
+            nested.mkdir(parents=True)
+            (nested / "hidden.txt").write_text("hidden", encoding="utf-8")
+            outside = Path(external) / "hidden.txt"
+            outside.write_text("safe", encoding="utf-8")
+            data = benchmark.load_json(scenario)
+            data["inject_after_run"] = [{"source": "hidden-dir", "destination": "overlay"}]
+            scenario.write_text(json.dumps(data), encoding="utf-8")
+            variant = self.make_variant(root, "variant", [
+                sys.executable, "-c",
+                f"from pathlib import Path; p=Path('overlay'); p.mkdir(); (p/'nested').symlink_to(r'{external}', target_is_directory=True)",
+            ])
+            result = benchmark.execute_scenario(scenario, variant)
+            self.assertEqual(result["failure_reason"], "injection_failed")
+            self.assertEqual(result["evaluations"], [])
+            self.assertEqual(outside.read_text(encoding="utf-8"), "safe")
+
+    def test_external_setup_failure_preserves_provenance_and_malformed_target_precedes_setup(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            scenario = self.make_scenario(root, "external", [])
+            data = benchmark.load_json(scenario)
+            data["fixture"] = {"url": str(root / "missing-repository"), "commit": "0" * 40}
+            scenario.write_text(json.dumps(data), encoding="utf-8")
+            variant = self.make_variant(root, "variant", [sys.executable, "-c", "raise SystemExit(9)"])
+            failed = benchmark.execute_scenario(scenario, variant)
+            self.assertEqual(failed["failure_reason"], "fixture_setup_failed")
+            self.assertEqual(failed["fixture_provenance"]["commit"], "0" * 40)
+
+            data["token_target"] = {"metric": "output_tokens", "minimum": 1}
+            scenario.write_text(json.dumps(data), encoding="utf-8")
+            malformed = benchmark.execute_scenario(scenario, variant)
+            self.assertEqual(malformed["failure_reason"], "scenario_configuration_failed")
+            self.assertNotIn("fixture_provenance", malformed)
+
+    def test_malformed_scenario_declarations_fail_before_materialization(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            scenario = self.make_scenario(root, "malformed", [])
+            variant = self.make_variant(root, "variant", [sys.executable, "-c", "raise SystemExit(99)"])
+            original = benchmark.materialize_external_fixture
+            cases = (
+                ("fixture", {"url": "x", "commit": "bad"}),
+                ("task", 12),
+                ("timeout_seconds", 0),
+                ("inject_after_run", [{"source": 12, "destination": "x"}]),
+                ("verification", [{"name": "broken", "command": None}]),
+            )
+            for key, value in cases:
+                data = benchmark.load_json(scenario)
+                data[key] = value
+                scenario.write_text(json.dumps(data), encoding="utf-8")
+                with self.subTest(key=key), unittest.mock.patch.object(benchmark, "materialize_external_fixture", side_effect=AssertionError):
+                    result = benchmark.execute_scenario(scenario, variant)
+                self.assertEqual(result["failure_reason"], "scenario_configuration_failed")
+            self.assertIs(benchmark.materialize_external_fixture, original)
+
+    def test_external_runs_use_independent_workspaces_and_missing_usage_does_not_fail(self):
+        if shutil.which("git") is None:
+            self.skipTest("git not available")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source, revision = self.make_git_fixture(root)
+            scenario = self.make_scenario(root, "external-run", [])
+            data = benchmark.load_json(scenario)
+            data["fixture"] = {"url": str(source), "commit": revision}
+            data["token_target"] = 400000
+            scenario.write_text(json.dumps(data), encoding="utf-8")
+            command = [sys.executable, "-c", "from pathlib import Path; Path('tracked.txt').write_text('changed')"]
+            variant = self.make_variant(root, "variant", command)
+            with unittest.mock.patch.dict(os.environ, {"BENCHMARK_FIXTURE_CACHE": str(root / "cache")}):
+                first = benchmark.execute_scenario(scenario, variant, keep_workspace=True)
+                second = benchmark.execute_scenario(scenario, variant, keep_workspace=True)
+            self.assertTrue(first["success"] and second["success"])
+            self.assertNotEqual(first["workspace"], second["workspace"])
+            self.assertIsNone(first["token_qualification"]["actual"])
+            self.assertFalse(first["token_qualification"]["met"])
+            self.assertEqual((source / "tracked.txt").read_text(encoding="utf-8"), "original")
+            shutil.rmtree(Path(first["workspace"]).parent, ignore_errors=True)
+            shutil.rmtree(Path(second["workspace"]).parent, ignore_errors=True)
+
+    def test_compare_aggregates_qualifying_runs_without_changing_success_rate(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            paths = []
+            for index, qualification in enumerate((
+                {"metric": "input_tokens", "minimum": 400000, "actual": 400000, "met": True},
+                {"metric": "input_tokens", "minimum": 400000, "actual": 1, "met": False},
+                None,
+            )):
+                result = {"scenario": "aggregate", "variant": "v", "started_at": "2024-01-01T00:00:00Z",
+                          "success": True, "duration_seconds": 1, "usage": {"input_tokens": index + 1}}
+                if qualification is not None:
+                    result["token_qualification"] = qualification
+                path = root / f"{index}.json"
+                path.write_text(json.dumps(result), encoding="utf-8")
+                paths.append(str(path))
+            args = type("Args", (), {"results": paths, "scenario": None, "variant": None, "since": None})()
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                benchmark.command_compare(args)
+            self.assertIn("| aggregate | v | 3 | 100% |", output.getvalue())
+            self.assertIn("| 2 | 1 |", output.getvalue())
+
+    def test_execution_result_with_null_qualification_can_be_compared(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            scenario = self.make_scenario(root, "comparison-execution", [])
+            variant = self.make_variant(root, "variant", [sys.executable, "-c", "pass"])
+            result = benchmark.execute_scenario(scenario, variant)
+            result["token_qualification"] = None
+            path = root / "result.json"
+            path.write_text(json.dumps(result), encoding="utf-8")
+            args = type("Args", (), {"results": [str(path)], "scenario": None, "variant": None, "since": None})()
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(benchmark.command_compare(args), 0)
+            self.assertIn("| comparison-execution | variant | 1 | 100% |", output.getvalue())
+
     def test_workspace_is_isolated_git_repo_with_correct_pwd(self):
         if shutil.which("git") is None:
             self.skipTest("git not available")
@@ -275,6 +634,114 @@ class BenchmarkRunnerTests(unittest.TestCase):
                 self.assertEqual(len(result["evaluations"]), 1)
                 self.assertIn("setup", result)
                 self.assertIn("duration_seconds", result)
+
+    def test_django_scenario_injects_dependency_bootstrap_for_upstream_tests(self):
+        scenario_path = ROOT / "benchmarks" / "scenarios" / "django-complex-change" / "scenario.json"
+        scenario = benchmark.load_json(scenario_path)
+        injections = {item["source"]: item["destination"] for item in scenario["inject_after_run"]}
+        self.assertEqual(injections["hidden-tests/dependency_stubs.py"], "dependency_stubs.py")
+        self.assertEqual(injections["hidden-tests/run_unittest.py"], "run_unittest.py")
+        self.assertEqual(
+            scenario["verification"][0]["command"],
+            "python3 run_unittest.py -v tests.requests_tests.test_accept_header",
+        )
+
+    def test_django_dependency_bootstrap_supplies_missing_optional_imports(self):
+        hidden_tests = ROOT / "benchmarks" / "scenarios" / "django-complex-change" / "hidden-tests"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "asgiref").mkdir()
+            (root / "asgiref" / "__init__.py").write_text(
+                "raise ModuleNotFoundError('asgiref blocked for regression test')\n",
+                encoding="utf-8",
+            )
+            (root / "sqlparse.py").write_text(
+                "raise ModuleNotFoundError('sqlparse blocked for regression test')\n",
+                encoding="utf-8",
+            )
+            (root / "smoke_test.py").write_text(
+                "import unittest\n"
+                "class Smoke(unittest.TestCase):\n"
+                "    def test_bootstrap_started(self):\n"
+                "        self.assertIsNotNone(__import__('asgiref.sync'))\n"
+                "        self.assertIsNotNone(__import__('sqlparse'))\n",
+                encoding="utf-8",
+            )
+            completed = subprocess.run(
+                [sys.executable, str(hidden_tests / "run_unittest.py"), "-v", "smoke_test"],
+                cwd=directory,
+                env={"PATH": os.environ["PATH"], "PYTHONPATH": os.pathsep.join((directory, str(hidden_tests)))},
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("test_bootstrap_started", completed.stderr)
+        self.assertIn("OK", completed.stderr)
+
+    def test_django_dependency_bootstrap_configures_http_request_settings(self):
+        hidden_tests = ROOT / "benchmarks" / "scenarios" / "django-complex-change" / "hidden-tests"
+        with tempfile.TemporaryDirectory() as directory:
+            django = Path(directory, "django")
+            django.mkdir()
+            (django / "__init__.py").write_text("", encoding="utf-8")
+            (django / "conf.py").write_text(
+                "class Settings:\n"
+                "    configured = False\n"
+                "    def configure(self, **values):\n"
+                "        self.__dict__.update(values)\n"
+                "        self.configured = True\n"
+                "settings = Settings()\n",
+                encoding="utf-8",
+            )
+            (django / "http.py").write_text(
+                "from .conf import settings\n"
+                "class HttpRequest:\n"
+                "    def __init__(self):\n"
+                "        self.encoding = settings.DEFAULT_CHARSET\n",
+                encoding="utf-8",
+            )
+            Path(directory, "http_request_smoke.py").write_text(
+                "import unittest\n"
+                "from django.http import HttpRequest\n"
+                "class Smoke(unittest.TestCase):\n"
+                "    def test_http_request_uses_bootstrap_settings(self):\n"
+                "        self.assertEqual(HttpRequest().encoding, 'utf-8')\n",
+                encoding="utf-8",
+            )
+            completed = subprocess.run(
+                [sys.executable, str(hidden_tests / "run_unittest.py"), "-v", "http_request_smoke"],
+                cwd=directory,
+                env={**os.environ, "PYTHONPATH": os.pathsep.join((str(directory), str(hidden_tests)))},
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("test_http_request_uses_bootstrap_settings", completed.stderr)
+        self.assertIn("OK", completed.stderr)
+
+    def test_django_unittest_bootstrap_preserves_real_test_failures(self):
+        hidden_tests = ROOT / "benchmarks" / "scenarios" / "django-complex-change" / "hidden-tests"
+        with tempfile.TemporaryDirectory() as directory:
+            broken = Path(directory) / "broken_test.py"
+            broken.write_text(
+                "import unittest\n"
+                "class Broken(unittest.TestCase):\n"
+                "    def test_failure(self):\n"
+                "        self.fail('intentional')\n",
+                encoding="utf-8",
+            )
+            completed = subprocess.run(
+                [sys.executable, str(hidden_tests / "run_unittest.py"), "-v", "broken_test"],
+                cwd=directory,
+                env={**os.environ, "PYTHONPATH": os.pathsep.join((str(directory), str(hidden_tests)))},
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        self.assertNotEqual(completed.returncode, 0)
+        self.assertIn("intentional", completed.stderr)
 
     def test_failure_result_has_failure_reason(self):
         with tempfile.TemporaryDirectory() as directory, tempfile.TemporaryDirectory() as results:
@@ -395,6 +862,12 @@ class BenchmarkRunnerTests(unittest.TestCase):
     def test_compare_since_rejects_invalid_timestamp(self):
         with self.assertRaises(argparse.ArgumentTypeError):
             benchmark.parse_timestamp("not-a-timestamp")
+
+    def test_token_qualification_is_independent_of_correctness(self):
+        scenario = {"token_target": {"metric": "input_tokens", "minimum": 400_000}}
+        self.assertTrue(benchmark.token_qualification(scenario, {"input_tokens": 400_000})["met"])
+        self.assertFalse(benchmark.token_qualification(scenario, {"input_tokens": 1})["met"])
+        self.assertIsNone(benchmark.token_qualification(scenario, None)["actual"])
 
 
 if __name__ == "__main__":

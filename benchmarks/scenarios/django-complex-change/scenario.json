@@ -1,0 +1,44 @@
+{
+  "name": "django-complex-change",
+  "fixture": {
+    "url": "https://github.com/django/django.git",
+    "commit": "467aeeb569da17a7573e8dfc4932434c84e70642"
+  },
+  "task": "task.md",
+  "timeout_seconds": 7200,
+  "token_target": {
+    "metric": "input_tokens",
+    "minimum": 400000
+  },
+  "inject_after_run": [
+    {
+      "source": "hidden-tests/dependency_stubs.py",
+      "destination": "dependency_stubs.py"
+    },
+    {
+      "source": "hidden-tests/run_unittest.py",
+      "destination": "run_unittest.py"
+    },
+    {
+      "source": "hidden-tests/test_hidden.py",
+      "destination": "test_hidden.py"
+    }
+  ],
+  "verification": [
+    {
+      "name": "upstream Accept header regressions",
+      "command": "python3 run_unittest.py -v tests.requests_tests.test_accept_header",
+      "timeout_seconds": 600
+    },
+    {
+      "name": "hidden behavioral tests",
+      "command": "python3 -m unittest test_hidden -v",
+      "timeout_seconds": 600
+    },
+    {
+      "name": "public tests and documentation",
+      "command": "python3 -m unittest test_hidden.PublicChangeEvidenceTests -v",
+      "timeout_seconds": 120
+    }
+  ]
+}
