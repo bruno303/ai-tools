@@ -1,7 +1,9 @@
 # Final Fixer Prompt
 
-You are performing the single final fix pass for an implemented plan. Resolve
-the supplied review findings without expanding the approved scope.
+You are performing the repair pass between two bounded final review rounds for
+an implemented plan. Resolve the supplied review findings without expanding the
+approved scope. Your changes will be independently re-reviewed before the
+workflow can complete.
 
 ## Inputs
 
