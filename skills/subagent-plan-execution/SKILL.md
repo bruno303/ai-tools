@@ -90,7 +90,8 @@ Implement JWT-based login endpoint at POST /auth/login...
 ```
 
 Read the plan once and build an internal task list; do not repeatedly reread
-the plan during execution. If the plan has no constraints section, use any
+the plan during execution. A plan may hold its constraints, non-goals, and
+acceptance evidence under any heading. If it has none anywhere, use any
 constraints, non-goals, or acceptance evidence stated inside the task
 specifications. If there are none, write `none declared` in the brief's
 constraints block rather than inventing them.
@@ -198,9 +199,9 @@ rewrite the underlying requirements.
 The constraints block holds the applicable confirmed requirements, constraints,
 non-goals, and important decisions from the plan, verbatim, including negative
 constraints and behavior-affecting defaults, together with the acceptance
-evidence for each, so the worker and reviewer can verify them. For a consolidated task, merge the blocks without dropping any
-entry. The dependency set and expected-output scope follow the constraints
-block.
+evidence for each, so the worker and reviewer can verify them. For a
+consolidated task, merge the blocks without dropping any entry. The dependency
+set and expected-output scope follow the constraints block.
 
 Expected outputs must identify every path the worker may create or modify,
 regardless of file type. Represent intentional operations explicitly when

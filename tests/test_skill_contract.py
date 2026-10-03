@@ -101,6 +101,14 @@ class SubagentPlanExecutionContractTests(unittest.TestCase):
         self.assertIn("followed by the constraints block (item 4), then the combined dependency set", self.normalized_skill_text)
         self.assertIn("write `none declared` in the brief's constraints block", self.normalized_skill_text)
 
+    def test_implementer_honours_constraints_and_plan_headings_are_flexible(self):
+        implementer = re.sub(
+            r"\s+", " ", (ROOT / "skills" / "subagent-plan-execution" / "references" / "implementer_prompt.md").read_text(encoding="utf-8")
+        )
+        self.assertIn("Honour the constraints block in the brief", implementer)
+        self.assertIn("record the acceptance evidence for each in your report", implementer)
+        self.assertIn("under any heading", self.normalized_skill_text)
+
     def test_reviewers_check_constraints_and_non_goals(self):
         self.assertIn("brief's constraints block", self.normalized_reviewer_prompt_text)
         self.assertIn("non-goal", self.normalized_reviewer_prompt_text)
