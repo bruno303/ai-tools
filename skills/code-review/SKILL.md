@@ -138,6 +138,11 @@ Look for:
 
 Prioritize problems that can cause incorrect runtime behavior.
 
+Before reporting a regression, verify the baseline behavior. Confirm that the
+pre-change code did not already behave that way, and identify how the change
+introduces or exposes the problem. Do not label unchanged pre-existing behavior
+as introduced by the change without that evidence.
+
 ## Reliability
 
 Evaluate behavior under realistic failure conditions.
@@ -368,7 +373,8 @@ Describe the realistic consequence.
 
 **Evidence:**  
 Reference the relevant code, project pattern, `AGENTS.md`/`CLAUDE.md` rule, test, contract,
-or conflicting behavior.
+or conflicting behavior. For regression claims, include the baseline and
+changed behavior.
 
 **Suggested direction:**  
 Describe how the issue could be addressed without unnecessarily prescribing an

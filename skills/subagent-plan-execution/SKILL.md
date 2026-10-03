@@ -73,6 +73,10 @@ unfamiliar with the project to implement. Example:
 ```markdown
 # Plan: Feature Name
 
+## Constraints and acceptance evidence
+- Constraint: tokens expire after 15 minutes (global). Evidence: expiry test.
+- Non-goal: no refresh tokens. Evidence: no refresh endpoint in the diff.
+
 ## Task 1: Add user authentication
 **Files:** src/auth/login.ts, src/auth/middleware.ts
 **Dependencies:** none
@@ -86,7 +90,7 @@ Implement JWT-based login endpoint at POST /auth/login...
 ```
 
 Read the plan once and build an internal task list; do not repeatedly reread
-the plan during execution.
+the plan during execution. Use whatever plan format makes its intent clear.
 
 Before dispatching workers:
 
@@ -95,18 +99,17 @@ Before dispatching workers:
    from an independent checkpoint.
 2. Do not merge tasks that are independent, substantially different in
    context, individually complex, or meaningful checkpoints.
-3. Preserve every requirement and dependency when consolidating tasks. For a
-   consolidated execution unit, write a single brief that contains the original
-   merged task specifications verbatim, in plan order, followed only by the
-   combined dependency set and combined expected-output scope needed to execute
-   them as one task. Do not rewrite or summarize away any original requirement.
-4. Record each task's dependency set and expected writable file scope.
-5. Before dispatch, validate the declared writable scope against the task's
-   direct contracts/callers/configuration when this can be done cheaply. The
-   orchestrator may add a clearly necessary supporting path to the task scope
-   before dispatch, but it must record that path explicitly in the brief/output
-   list; never silently broaden the scope.
-6. Capture an implementation baseline after the plan file has been created and
+3. Preserve requirements and dependencies when consolidating tasks. A brief
+   may summarize the plan, but must retain relevant constraints, non-goals,
+   decisions, and verification expectations.
+4. Use judgment to decide which plan details each worker needs. Resolve
+   material ambiguity before dispatch rather than inventing requirements.
+5. Record each task's dependency set and expected writable file scope.
+6. Check expected paths and supporting callers, contracts, and configuration
+   before dispatch, accounting for prerequisite outputs. Resolve material
+   mismatches before the worker starts. Necessary supporting paths may be added
+   to the brief explicitly; never silently broaden the writable scope.
+7. Capture an implementation baseline after the plan file has been created and
    before the first task brief. Capture each task baseline after that task's
    brief has been created and verified, but before its worker is dispatched. A
    task baseline must represent the current worktree, not only `HEAD`, because
@@ -164,11 +167,10 @@ execution serial.
 
 ### 1a. Write the brief file
 
-For a normal task, create `.agents/plans/task-N-brief.md` containing the task
-specification verbatim from the plan. For a consolidated task, include each
-merged original task specification verbatim and in plan order, then append only
-the combined dependency set and combined expected-output scope established in
-Step 0. Do not rewrite the underlying requirements.
+Create `.agents/plans/task-N-brief.md` with the task, relevant requirements and
+constraints, dependencies, expected changes, and how to verify them. For merged
+tasks, preserve each task's intent. No fixed section order or verbatim copying
+is required; the brief must give a fresh worker enough context to act safely.
 
 Expected outputs must identify every path the worker may create or modify,
 regardless of file type. Represent intentional operations explicitly when
@@ -279,10 +281,14 @@ stage.
 
 #### Reviewer result handling
 
+Require a clear `STATUS: PASSED` or `STATUS: CHANGES_REQUESTED`. Never infer a
+pass from an ambiguous verdict.
+
 | Response | Action |
 |---|---|
 | **`STATUS: PASSED`** | Proceed to the task handback gate. |
 | **`STATUS: CHANGES_REQUESTED`** | Dispatch one fresh `executor` fixer for a single consolidated fix pass containing the findings. It may modify only the declared expected outputs and its task report; it must not modify generated diff artifacts. The fixer must rerun the focused verification command and update the report. Regenerate the scoped diff if an updated artifact is needed. Do not re-review the task. |
+| Ambiguous or missing status | Ask a fresh reviewer once for a clear verdict. If it remains unclear, stop and report the blocker. |
 
 If the reviewer flags something that is demonstrably correct (for example,
 existing behavior compiles, tests pass, and follows the contract), reject that
@@ -335,14 +341,18 @@ the `reviewer` profile and:
 That reviewer must apply the full `code-review` skill and inspect the feature
 end-to-end. This is the only full aggregate review.
 
+Require a clear `STATUS: PASSED` or `STATUS: CHANGES_REQUESTED`. If the final
+verdict is missing or ambiguous, stop and report the blocker; do not retry the
+aggregate review or infer a pass.
+
 If the final reviewer returns `STATUS: PASSED`, proceed to the final quality
 gate. If it returns `STATUS: CHANGES_REQUESTED`, dispatch one final
 consolidated fixer with the `executor` profile and all critical, high, and
 medium findings plus practical low findings. The fixer may not edit generated
-diff artifacts. If it returns `STATUS: OK`, regenerate the aggregate artifact
-if needed and run the final quality gate. If it returns `STATUS: BLOCKED`, stop
-and report the unresolved blocker; do not dispatch another reviewer or
-automatic fix loop.
+diff artifacts. If the fixer returns `STATUS: OK`, regenerate the aggregate
+artifact if needed and run the final quality gate. If it returns
+`STATUS: BLOCKED`, stop and report the unresolved blocker; do not dispatch
+another reviewer or automatic fix loop.
 
 ## Step 3: Final quality gate
 
@@ -372,6 +382,8 @@ default configuration.
 - Pass artifact paths, not pasted specs, reports, or diffs.
 - Read only verdicts from worker responses: `DONE`/`BLOCKED`, reviewer status,
   findings, and verification results.
+- Update the user only for meaningful discoveries, decisions, blockers, and
+  completion; do not narrate routine task-by-task progress.
 - Do not reread completed task details after their gate passes.
 - At roughly 70% context usage, checkpoint completed tasks, finish the current
   task, and warn the user.

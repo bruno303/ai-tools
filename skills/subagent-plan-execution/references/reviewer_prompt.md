@@ -28,6 +28,8 @@ reviewer profile controls model and reasoning settings.
 - The diff contains no unexpected files or previous task changes
 - Function signatures, types, and return values match what the spec describes
 - No scope creep — nothing extra was added beyond the spec
+- Relevant constraints and non-goals are respected, with verification evidence
+  in the report or diff
 - Nothing was missed or left incomplete
 
 ### Code Quality
@@ -36,6 +38,11 @@ reviewer profile controls model and reasoning settings.
 - No obvious bugs, race conditions, or security issues
 - Test coverage is adequate for the change
 - Import paths and dependencies are correct
+
+### Findings and Evidence
+Use the evidence standard in `code-review`: actionable findings supported by
+concrete evidence, with a baseline check for regression claims. This does not
+require a full aggregate review at the task gate.
 
 ## Response Format
 
@@ -49,6 +56,7 @@ FINDINGS:
   file: ...
   line: ...
   issue: ...
+  evidence: ...
   fix: ...
 ```
 
@@ -67,11 +75,13 @@ FINDINGS:
   file: src/users.ts
   line: 42
   issue: endpoint returns 200 instead of 201 on create
+  evidence: brief declares 201; baseline returned 201 and this diff changed it to 200
   fix: return 201 for successful creation
 - severity: low
   file: src/users.ts
   line: 18
   issue: error messages are generic
+  evidence: no field names, unlike the existing validation helper
   fix: consider including field names
 ```
 

@@ -40,7 +40,7 @@ class RfcImplementationPlanSkillContractTests(unittest.TestCase):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase.lower(), self.skill_text.lower())
 
-        for section in ("Implementation summary", "Affected areas", "Assumptions and blockers", "Ordered tasks", "Execution notes"):
+        for section in ("Implementation summary", "Affected areas", "Assumptions and blockers", "Constraints, non-goals, and acceptance evidence", "Ordered tasks", "Execution notes"):
             self.assertRegex(self.skill_text, rf"##[^\n]*{re.escape(section)}")
         for field in (
             "Objective", "Repository area", "Expected changes/scope",
