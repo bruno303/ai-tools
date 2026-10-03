@@ -28,9 +28,8 @@ reviewer profile controls model and reasoning settings.
 - The diff contains no unexpected files or previous task changes
 - Function signatures, types, and return values match what the spec describes
 - No scope creep — nothing extra was added beyond the spec
-- The diff does not violate any constraint, non-goal, or behavior-affecting
-  default in the brief's constraints block, and the acceptance evidence listed
-  there is present in the report or the diff
+- Relevant constraints and non-goals are respected, with verification evidence
+  in the report or diff
 - Nothing was missed or left incomplete
 
 ### Code Quality
@@ -41,12 +40,9 @@ reviewer profile controls model and reasoning settings.
 - Import paths and dependencies are correct
 
 ### Findings and Evidence
-- Every finding includes concrete evidence: the exact file and symbol or line,
-  plus the spec, contract, or baseline behavior it violates.
-- Verify baseline behavior before calling something a regression. Do not
-  attribute unchanged pre-existing behavior to the change without evidence that
-  the change introduces or exposes it.
-- Report only actionable defects, not stylistic preferences.
+Use the evidence standard in `code-review`: actionable findings supported by
+concrete evidence, with a baseline check for regression claims. This does not
+require a full aggregate review at the task gate.
 
 ## Response Format
 
@@ -63,9 +59,6 @@ FINDINGS:
   evidence: ...
   fix: ...
 ```
-
-Use only those two status values. A missing, malformed, or different status is a
-protocol failure; never report or infer a pass from an ambiguous verdict.
 
 Use `STATUS: PASSED` only when there are no high or medium findings. Use
 `STATUS: CHANGES_REQUESTED` when any high or medium finding exists or the review

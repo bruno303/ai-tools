@@ -90,11 +90,7 @@ Implement JWT-based login endpoint at POST /auth/login...
 ```
 
 Read the plan once and build an internal task list; do not repeatedly reread
-the plan during execution. A plan may hold its constraints, non-goals, and
-acceptance evidence under any heading. If it has none anywhere, use any
-constraints, non-goals, or acceptance evidence stated inside the task
-specifications. If there are none, write `none declared` in the brief's
-constraints block rather than inventing them.
+the plan during execution. Use whatever plan format makes its intent clear.
 
 Before dispatching workers:
 
@@ -103,34 +99,16 @@ Before dispatching workers:
    from an independent checkpoint.
 2. Do not merge tasks that are independent, substantially different in
    context, individually complex, or meaningful checkpoints.
-3. Preserve every requirement and dependency when consolidating tasks. For a
-   consolidated execution unit, write a single brief that contains the original
-   merged task specifications verbatim, in plan order, followed by the
-   constraints block (item 4), then the combined dependency set and combined
-   expected-output scope needed to execute them as one task. Do not rewrite or
-   summarize away any original requirement.
-4. Preserve the plan's confirmed requirements, constraints, non-goals, and
-   important decisions, including negative constraints and defaults that affect
-   behavior, together with the acceptance evidence that shows each is met. A
-   constraint is applicable to a brief when it is global or names that task's
-   paths or behavior. The brief carries them in a separate constraints block
-   (see Step 1a), not inside the verbatim task specification.
+3. Preserve requirements and dependencies when consolidating tasks. A brief
+   may summarize the plan, but must retain relevant constraints, non-goals,
+   decisions, and verification expectations.
+4. Use judgment to decide which plan details each worker needs. Resolve
+   material ambiguity before dispatch rather than inventing requirements.
 5. Record each task's dependency set and expected writable file scope.
-6. Before dispatch, validate the declared writable scope against the task's
-   direct contracts/callers/configuration when this can be done cheaply, and
-   validate every expected output path against the repository. A path resolves
-   when it exists at the exact declared location, or when a prerequisite task
-   declares it as created or as the target of a rename. An edit, deletion, or
-   rename source must resolve this way. A new path must have a parent that
-   exists or is declared by a prerequisite or by the same task, plus a location
-   and naming that match repository and test-placement conventions. Check each
-   task's paths again in Step 1a when its brief is written, because the
-   repository then includes the outputs of tasks that already passed their
-   gates. Correct the brief before dispatch when a path is unresolved or seems
-   wrong. The orchestrator may add a clearly
-   necessary supporting path to the task scope before dispatch, but it must
-   record that path explicitly in the brief/output list; never silently broaden
-   the scope.
+6. Check expected paths and supporting callers, contracts, and configuration
+   before dispatch, accounting for prerequisite outputs. Resolve material
+   mismatches before the worker starts. Necessary supporting paths may be added
+   to the brief explicitly; never silently broaden the writable scope.
 7. Capture an implementation baseline after the plan file has been created and
    before the first task brief. Capture each task baseline after that task's
    brief has been created and verified, but before its worker is dispatched. A
@@ -189,19 +167,10 @@ execution serial.
 
 ### 1a. Write the brief file
 
-For a normal task, create `.agents/plans/task-N-brief.md` containing the task
-specification verbatim from the plan. For a consolidated task, include each
-merged original task specification verbatim and in plan order. After the
-specification(s), add the constraints block described below, then the combined
-dependency set and combined expected-output scope established in Step 0. Do not
-rewrite the underlying requirements.
-
-The constraints block holds the applicable confirmed requirements, constraints,
-non-goals, and important decisions from the plan, verbatim, including negative
-constraints and behavior-affecting defaults, together with the acceptance
-evidence for each, so the worker and reviewer can verify them. For a
-consolidated task, merge the blocks without dropping any entry. The dependency
-set and expected-output scope follow the constraints block.
+Create `.agents/plans/task-N-brief.md` with the task, relevant requirements and
+constraints, dependencies, expected changes, and how to verify them. For merged
+tasks, preserve each task's intent. No fixed section order or verbatim copying
+is required; the brief must give a fresh worker enough context to act safely.
 
 Expected outputs must identify every path the worker may create or modify,
 regardless of file type. Represent intentional operations explicitly when
@@ -312,21 +281,14 @@ stage.
 
 #### Reviewer result handling
 
-Accept only the status values declared by the reviewer contract: `STATUS: PASSED`
-and `STATUS: CHANGES_REQUESTED`. A missing, malformed, or different status is a
-protocol failure. Do not infer a pass.
+Require a clear `STATUS: PASSED` or `STATUS: CHANGES_REQUESTED`. Never infer a
+pass from an ambiguous verdict.
 
 | Response | Action |
 |---|---|
 | **`STATUS: PASSED`** | Proceed to the task handback gate. |
 | **`STATUS: CHANGES_REQUESTED`** | Dispatch one fresh `executor` fixer for a single consolidated fix pass containing the findings. It may modify only the declared expected outputs and its task report; it must not modify generated diff artifacts. The fixer must rerun the focused verification command and update the report. Regenerate the scoped diff if an updated artifact is needed. Do not re-review the task. |
-| Missing, malformed, or unrecognized status | Protocol failure. Do not infer a pass. A malformed task-review verdict gets exactly one retry: re-dispatch the reviewer once with the reviewer contract. If the status is still absent or unrecognized, stop the task and report the protocol failure. |
-
-A task-review verdict gets one retry because a task gate is per-task and a
-repeated scoped review is bounded. This differs from the final aggregate review
-in Step 2: a malformed final-review verdict stops immediately and gets no retry,
-because that review is the single final aggregate gate and there is no second
-aggregate review to fall back on.
+| Ambiguous or missing status | Ask a fresh reviewer once for a clear verdict. If it remains unclear, stop and report the blocker. |
 
 If the reviewer flags something that is demonstrably correct (for example,
 existing behavior compiles, tests pass, and follows the contract), reject that
@@ -379,12 +341,9 @@ the `reviewer` profile and:
 That reviewer must apply the full `code-review` skill and inspect the feature
 end-to-end. This is the only full aggregate review.
 
-Accept only the final reviewer status values from its contract: `STATUS: PASSED`
-and `STATUS: CHANGES_REQUESTED`. A missing, malformed, or different status is a
-protocol failure; do not infer a pass — stop and report it immediately. Unlike
-the task-review verdict, a malformed final-review verdict gets no retry: this is
-the single final aggregate gate, so there is no second aggregate review to fall
-back on and no automatic re-review loop.
+Require a clear `STATUS: PASSED` or `STATUS: CHANGES_REQUESTED`. If the final
+verdict is missing or ambiguous, stop and report the blocker; do not retry the
+aggregate review or infer a pass.
 
 If the final reviewer returns `STATUS: PASSED`, proceed to the final quality
 gate. If it returns `STATUS: CHANGES_REQUESTED`, dispatch one final

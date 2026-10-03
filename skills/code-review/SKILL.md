@@ -373,9 +373,8 @@ Describe the realistic consequence.
 
 **Evidence:**  
 Reference the relevant code, project pattern, `AGENTS.md`/`CLAUDE.md` rule, test, contract,
-or conflicting behavior. For a claimed regression, include the baseline behavior
-and the changed behavior that introduces or exposes it. Every finding must
-carry evidence; an assertion without it is a preference, not a finding.
+or conflicting behavior. For regression claims, include the baseline and
+changed behavior.
 
 **Suggested direction:**  
 Describe how the issue could be addressed without unnecessarily prescribing an
@@ -456,8 +455,6 @@ Always follow these principles:
 - Do not assume missing requirements without repository evidence.
 - Do not review only the diff when surrounding context is needed.
 - Do not make speculative claims without evidence.
-- Support every finding with concrete evidence.
-- Verify baseline behavior before claiming a regression.
 - Do not generate findings just to appear thorough.
 - Every reported issue must be defensible to the engineer who wrote the code.
 - When uncertain whether something is a defect or merely a preference, omit it
