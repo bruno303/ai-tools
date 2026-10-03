@@ -6,6 +6,20 @@ problems. The full `code-review` skill is reserved for the final aggregate revie
 Keep this review bounded to the current task; do not compensate for the smaller
 scope by performing a broad repository review.
 
+## Review Context
+
+- **Mode:** `{review_mode}` (`initial` or `repair`)
+- **Previous findings:** `{previous_findings}`
+
+For an initial review, treat previous findings as `none`.
+
+For a repair review, use the previous findings as a checklist rather than as
+facts that must still be true. Verify each prior high/medium finding against the
+updated diff, report it again only if it remains unresolved, and do not repeat a
+finding merely to restate it. Then inspect the repair itself for regressions and
+use remaining attention on one or more adjacent risk areas that were not deeply
+covered in the first pass.
+
 ## Instructions
 
 1. **Read the task spec** at `{brief_path}`. This is the requirements the implementation must satisfy.
@@ -14,6 +28,7 @@ scope by performing a broad repository review.
 4. Start with only those three inputs. Inspect an additional exact declaration, caller, contract, test, or dependency only when a changed hunk cannot be validated without it. Normally follow at most one direct hop; expand further only for a concrete correctness concern.
 5. Do not modify files or perform a broad architectural/end-to-end review; the final reviewer handles that. Do not read previous task reports, unrelated documentation, or recursively inspect dependency trees.
 6. Do not automatically read complete changed files, run broad repository searches, or rerun tests. Use the report's focused verification evidence; run a narrow check only when the handback is missing required evidence or a concrete concern cannot otherwise be resolved.
+7. In `repair` mode, explicitly verify whether each previous high/medium finding is resolved, check whether the corresponding fix introduced a regression, and avoid spending the whole pass re-litigating already-resolved points.
 
 Where the host runtime supports it, use a small step/output budget. The selected
 reviewer profile controls model and reasoning settings.
@@ -57,6 +72,9 @@ Use `STATUS: PASSED` only when there are no high or medium findings. Use
 input is too incomplete for a reliable review. Put every actionable issue under
 `FINDINGS`; write `- none` when there are no findings. Low findings do not by
 themselves require changes, but should still be included for the fixer.
+
+In `repair` mode, resolved previous findings must not appear under `FINDINGS`.
+Only report still-unresolved findings or newly discovered actionable issues.
 
 Example:
 ```
