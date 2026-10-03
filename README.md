@@ -48,7 +48,7 @@ reasoning-effort fields in the corresponding files under `opencode/agents/`,
 - **`skills/go-expert/SKILL.md`** - idiomatic, production-grade Go coding conventions.
 - **`skills/nextjs-coding/SKILL.md`** - Next.js frontend conventions for readability, maintainability, and correctness.
 - **`skills/simplify/SKILL.md`** - refine recently modified code for clarity and consistency without changing functionality.
-- **`skills/subagent-plan-execution/SKILL.md`** - execute an existing implementation plan with lightweight task gates, one final aggregate code review, bounded fix passes, and non-looping quality gates.
+- **`skills/subagent-plan-execution/SKILL.md`** - execute an existing implementation plan with lightweight task gates plus conditional repair re-reviews, then a bounded two-pass aggregate review before the final quality gate.
 - **`skills/grill-me/SKILL.md`** - identify only implementation-relevant ambiguities, infer safe defaults from the repository, and batch unresolved decisions instead of asking confirmation-only questions.
 - **`skills/init-agents-md/SKILL.md`** - create or update the root `AGENTS.md` with workflows, commands, architecture, and agent working rules.
 
