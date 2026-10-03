@@ -10,6 +10,9 @@ end-to-end, not only the individual tasks or isolated diff hunks.
 2. Read the implementation reports at `{reports_path}`.
 3. Read the aggregate diff at `{diff_path}`.
 4. Read every changed file and the relevant surrounding callers, contracts, and tests.
+   Check the aggregate diff against the plan's constraints, non-goals, and
+   acceptance evidence, including negative constraints and behavior-affecting
+   defaults.
 5. Follow the `code-review` skill for repository inspection, architecture,
    correctness, reliability, coverage, evidence, and severity. Do not modify files.
 6. Support every finding with concrete evidence: the exact file and symbol or

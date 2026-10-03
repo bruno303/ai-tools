@@ -28,6 +28,9 @@ reviewer profile controls model and reasoning settings.
 - The diff contains no unexpected files or previous task changes
 - Function signatures, types, and return values match what the spec describes
 - No scope creep — nothing extra was added beyond the spec
+- The diff does not violate any constraint, non-goal, or behavior-affecting
+  default in the brief's constraints block, and the acceptance evidence listed
+  there is present in the report or the diff
 - Nothing was missed or left incomplete
 
 ### Code Quality

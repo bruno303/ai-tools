@@ -89,13 +89,25 @@ class SubagentPlanExecutionContractTests(unittest.TestCase):
     def test_plan_format_has_a_home_for_constraints_and_briefs_carry_them(self):
         self.assertIn("## Constraints and acceptance evidence", self.skill_text)
         for phrase in (
-            "add a constraints block",
+            "The constraints block holds the applicable confirmed requirements",
             "The dependency set and expected-output scope follow the constraints block",
             "A constraint is applicable to a brief when it is global or names that task's paths or behavior",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.normalized_skill_text)
         self.assertIn("a path an earlier task in the plan creates", self.normalized_plan_skill_text)
+        self.assertNotIn("followed only by the combined dependency set", self.normalized_skill_text)
+        self.assertNotIn("then append only the combined dependency set", self.normalized_skill_text)
+        self.assertIn("followed by the constraints block (item 4), then the combined dependency set", self.normalized_skill_text)
+        self.assertIn("write `none declared` in the brief's constraints block", self.normalized_skill_text)
+
+    def test_reviewers_check_constraints_and_non_goals(self):
+        self.assertIn("brief's constraints block", self.normalized_reviewer_prompt_text)
+        self.assertIn("non-goal", self.normalized_reviewer_prompt_text)
+        self.assertIn(
+            "plan's constraints, non-goals, and acceptance evidence",
+            self.normalized_final_reviewer_prompt_text,
+        )
 
     def test_review_status_is_a_strict_protocol_not_an_inferred_pass(self):
         self.assertIn(

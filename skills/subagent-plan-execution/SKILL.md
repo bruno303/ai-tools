@@ -90,9 +90,10 @@ Implement JWT-based login endpoint at POST /auth/login...
 ```
 
 Read the plan once and build an internal task list; do not repeatedly reread
-the plan during execution. If the plan has no constraints, non-goals, or
-acceptance evidence section, take them from the task specifications and record
-that none were declared rather than inventing them.
+the plan during execution. If the plan has no constraints section, use any
+constraints, non-goals, or acceptance evidence stated inside the task
+specifications. If there are none, write `none declared` in the brief's
+constraints block rather than inventing them.
 
 Before dispatching workers:
 
@@ -103,9 +104,10 @@ Before dispatching workers:
    context, individually complex, or meaningful checkpoints.
 3. Preserve every requirement and dependency when consolidating tasks. For a
    consolidated execution unit, write a single brief that contains the original
-   merged task specifications verbatim, in plan order, followed only by the
-   combined dependency set and combined expected-output scope needed to execute
-   them as one task. Do not rewrite or summarize away any original requirement.
+   merged task specifications verbatim, in plan order, followed by the
+   constraints block (item 4), then the combined dependency set and combined
+   expected-output scope needed to execute them as one task. Do not rewrite or
+   summarize away any original requirement.
 4. Preserve the plan's confirmed requirements, constraints, non-goals, and
    important decisions, including negative constraints and defaults that affect
    behavior, together with the acceptance evidence that shows each is met. A
@@ -188,15 +190,15 @@ execution serial.
 
 For a normal task, create `.agents/plans/task-N-brief.md` containing the task
 specification verbatim from the plan. For a consolidated task, include each
-merged original task specification verbatim and in plan order, then append only
-the combined dependency set and combined expected-output scope established in
-Step 0. Do not rewrite the underlying requirements.
+merged original task specification verbatim and in plan order. After the
+specification(s), add the constraints block described below, then the combined
+dependency set and combined expected-output scope established in Step 0. Do not
+rewrite the underlying requirements.
 
-After the task specification, add a constraints block holding the applicable
-confirmed requirements, constraints, non-goals, and important decisions from the
-plan, verbatim, including negative constraints and behavior-affecting defaults,
-together with the acceptance evidence for each, so the worker and reviewer can
-verify them. For a consolidated task, merge the blocks without dropping any
+The constraints block holds the applicable confirmed requirements, constraints,
+non-goals, and important decisions from the plan, verbatim, including negative
+constraints and behavior-affecting defaults, together with the acceptance
+evidence for each, so the worker and reviewer can verify them. For a consolidated task, merge the blocks without dropping any
 entry. The dependency set and expected-output scope follow the constraints
 block.
 
