@@ -7,9 +7,9 @@ description: Execute an existing implementation plan by dispatching fresh subage
 
 Execute a multi-task implementation plan by dispatching each task to a fresh
 subagent with zero context pollution. Each task gets a lightweight,
-task-scoped implementation gate; after all tasks, one fresh reviewer applies the
-full `code-review` skill to the aggregate change, followed by one consolidated
-fix pass and a non-looping final quality gate.
+task-scoped implementation gate with a bounded repair/re-review loop; after all
+tasks, a fresh reviewer applies the full `code-review` skill to the aggregate
+change, with one bounded repair/re-review cycle before the final quality gate.
 
 ## Ownership and artifacts
 
@@ -272,25 +272,38 @@ The scoped diff procedure must:
    human-formatted status output with whitespace splitting.
 
 The reviewer receives only the task brief, task report, and this scoped diff at
-first. Read `references/reviewer_prompt.md`, fill in `{brief_path}`,
-`{report_path}`, and `{diff_path}`, then dispatch one fresh worker with the
-`reviewer` profile. Do not do broad architectural or end-to-end review at this
-stage.
+first. Read `references/reviewer_prompt.md` and fill in `{brief_path}`,
+`{report_path}`, `{diff_path}`, `{review_mode}`, and
+`{previous_findings}`. For the first pass use `review_mode=initial` and
+`previous_findings=none`. Dispatch one fresh worker with the `reviewer`
+profile. Do not do broad architectural or end-to-end review at this stage.
 
 #### Reviewer result handling
 
-| Response | Action |
-|---|---|
-| **`STATUS: PASSED`** | Proceed to the task handback gate. |
-| **`STATUS: CHANGES_REQUESTED`** | Dispatch one fresh `executor` fixer for a single consolidated fix pass containing the findings. It may modify only the declared expected outputs and its task report; it must not modify generated diff artifacts. The fixer must rerun the focused verification command and update the report. Regenerate the scoped diff if an updated artifact is needed. Do not re-review the task. |
+Use at most two lightweight review passes for a task. The second pass is
+conditional: do not spend another reviewer call when the first pass is clean.
 
-If the reviewer flags something that is demonstrably correct (for example,
-existing behavior compiles, tests pass, and follows the contract), reject that
-specific feedback and proceed. Reviewers can be wrong when they lack context.
+| Pass | Response | Action |
+|---|---|---|
+| **Initial review** | **`STATUS: PASSED`** | Proceed to the task handback gate. |
+| **Initial review** | **`STATUS: CHANGES_REQUESTED`** | Dispatch one fresh `executor` fixer for a consolidated repair pass containing the findings. It may modify only the declared expected outputs and its task report; it must not modify generated diff artifacts. The fixer must rerun the focused verification command and update the report. Then regenerate the scoped diff and dispatch one fresh `reviewer` for the repair review with `review_mode=repair` and the complete initial findings in `previous_findings`. |
+| **Repair review** | **`STATUS: PASSED`** | Proceed to the task handback gate. |
+| **Repair review** | **`STATUS: CHANGES_REQUESTED`** | Stop the automatic task loop and report `REVIEW_LOOP_EXHAUSTED` with the remaining findings. Do not blindly dispatch another fixer or reviewer. Reassess the requirement, root cause, surrounding contract, or design before another implementation attempt. |
 
-If the fixer returns `DONE`, continue to the task handback gate. If it returns
-`BLOCKED`, stop the task and report the unresolved blocker; do not continue to
-another task unless the orchestrator or user explicitly chooses to proceed.
+The repair reviewer must verify that each previous high/medium finding is
+actually resolved, inspect the repair diff for regressions introduced by the
+fix, and spend remaining attention on adjacent risk areas not deeply covered by
+the first pass. It must not repeat resolved findings merely to restate them.
+
+If any reviewer finding is demonstrably incorrect (for example, existing
+behavior compiles, tests pass, and follows the contract), reject that specific
+feedback and exclude it from the fixer input. Reviewers can be wrong when they
+lack context.
+
+If the fixer returns `DONE`, run the repair review described above. If it
+returns `BLOCKED`, stop the task and report the unresolved blocker; do not
+continue to another task unless the orchestrator or user explicitly chooses to
+proceed.
 
 ### 1d. Task handback gate
 
@@ -333,16 +346,35 @@ the `reviewer` profile and:
 - the aggregate diff.
 
 That reviewer must apply the full `code-review` skill and inspect the feature
-end-to-end. This is the only full aggregate review.
+end-to-end. Fill `{review_mode}` and `{previous_findings}` in the final
+reviewer prompt as well. For the initial aggregate pass use
+`review_mode=initial` and `previous_findings=none`.
 
-If the final reviewer returns `STATUS: PASSED`, proceed to the final quality
-gate. If it returns `STATUS: CHANGES_REQUESTED`, dispatch one final
-consolidated fixer with the `executor` profile and all critical, high, and
-medium findings plus practical low findings. The fixer may not edit generated
-diff artifacts. If it returns `STATUS: OK`, regenerate the aggregate artifact
-if needed and run the final quality gate. If it returns `STATUS: BLOCKED`, stop
-and report the unresolved blocker; do not dispatch another reviewer or
-automatic fix loop.
+Use at most two full aggregate review passes:
+
+1. If the initial final reviewer returns `STATUS: PASSED`, proceed to the final
+   quality gate.
+2. If it returns `STATUS: CHANGES_REQUESTED`, dispatch one final consolidated
+   fixer with the `executor` profile and all critical, high, and medium
+   findings plus practical low findings. The fixer may not edit generated diff
+   artifacts.
+3. If the fixer returns `STATUS: OK`, regenerate the aggregate diff and
+   dispatch one fresh final reviewer with `review_mode=repair` and the complete
+   previous findings in `previous_findings`. This repair review must verify
+   that prior findings were actually resolved, look for regressions introduced
+   by the repair, and then inspect adjacent integration risks that were not
+   deeply covered in the first pass.
+4. If the repair review returns `STATUS: PASSED`, proceed to the final quality
+   gate.
+5. If the repair review returns `STATUS: CHANGES_REQUESTED`, stop the automatic
+   loop and report `FINAL_REVIEW_LOOP_EXHAUSTED` with the remaining findings.
+   Do not dispatch another automatic fixer/reviewer pair; reassess the
+   requirement, root cause, or design before another attempt.
+6. If the fixer returns `STATUS: BLOCKED`, stop and report the unresolved
+   blocker.
+
+A repair reviewer must not repeat findings that are demonstrably resolved.
+Passing the initial review must never trigger a redundant second review.
 
 ## Step 3: Final quality gate
 
