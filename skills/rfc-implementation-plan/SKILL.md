@@ -38,6 +38,10 @@ Resolve evidence in this order:
 
 Record conflicts rather than silently choosing between strong sources.
 
+Carry the extracted constraints, non-goals, behavior-affecting defaults, and
+their acceptance evidence into the plan's constraints section so execution
+briefs can preserve them.
+
 ## Repository inspection
 
 Inspect the affected modules and their boundaries before sizing work. Include,
@@ -108,6 +112,9 @@ Produce a concise, writable plan with this shape:
 ## Assumptions and blockers
 - <repository-derived assumptions>
 - <material blockers or “none”>
+
+## Constraints, non-goals, and acceptance evidence
+- <RFC constraint, non-goal, or default that affects behavior, with the evidence that shows it is met>
 
 ## Ordered tasks
 ### Task 1: <cohesive outcome>

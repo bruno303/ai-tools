@@ -48,9 +48,10 @@ Examples of details to clarify when relevant:
   decisions explicitly, including negative constraints and defaults that affect
   behavior, each with the acceptance evidence that shows it is met.
 - Resolve expected output paths against the repository: name the exact existing
-  path for an edit; for a new path, confirm its parent and that its location and
-  naming follow repository and test-placement conventions. Do not list a path
-  that has not been checked.
+  path for an edit, or a path an earlier task in the plan creates; for a new
+  path, confirm its parent exists or is created by the plan and that its
+  location and naming follow repository and test-placement conventions. Do not
+  list a path that has not been checked.
 - Prefer minimal architecture changes.
 - Mark the plan as draft if important questions remain unanswered.
 

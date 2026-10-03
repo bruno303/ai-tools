@@ -73,6 +73,10 @@ unfamiliar with the project to implement. Example:
 ```markdown
 # Plan: Feature Name
 
+## Constraints and acceptance evidence
+- Constraint: tokens expire after 15 minutes (global). Evidence: expiry test.
+- Non-goal: no refresh tokens. Evidence: no refresh endpoint in the diff.
+
 ## Task 1: Add user authentication
 **Files:** src/auth/login.ts, src/auth/middleware.ts
 **Dependencies:** none
@@ -86,7 +90,9 @@ Implement JWT-based login endpoint at POST /auth/login...
 ```
 
 Read the plan once and build an internal task list; do not repeatedly reread
-the plan during execution.
+the plan during execution. If the plan has no constraints, non-goals, or
+acceptance evidence section, take them from the task specifications and record
+that none were declared rather than inventing them.
 
 Before dispatching workers:
 
@@ -101,17 +107,24 @@ Before dispatching workers:
    combined dependency set and combined expected-output scope needed to execute
    them as one task. Do not rewrite or summarize away any original requirement.
 4. Preserve the plan's confirmed requirements, constraints, non-goals, and
-   important decisions in every applicable brief, including negative
-   constraints and defaults that affect behavior, together with the acceptance
-   evidence that shows each is met.
+   important decisions, including negative constraints and defaults that affect
+   behavior, together with the acceptance evidence that shows each is met. A
+   constraint is applicable to a brief when it is global or names that task's
+   paths or behavior. The brief carries them in a separate constraints block
+   (see Step 1a), not inside the verbatim task specification.
 5. Record each task's dependency set and expected writable file scope.
 6. Before dispatch, validate the declared writable scope against the task's
    direct contracts/callers/configuration when this can be done cheaply, and
-   validate every expected output path against the repository: an edit must name
-   an existing path at the exact declared location, and a new path must have an
-   existing or declared parent plus a location and naming that match repository
-   and test-placement conventions. Correct the brief before dispatch when a
-   path is unresolved or seems wrong. The orchestrator may add a clearly
+   validate every expected output path against the repository. A path resolves
+   when it exists at the exact declared location, or when a prerequisite task
+   declares it as created or as the target of a rename. An edit, deletion, or
+   rename source must resolve this way. A new path must have a parent that
+   exists or is declared by a prerequisite or by the same task, plus a location
+   and naming that match repository and test-placement conventions. Check each
+   task's paths again in Step 1a when its brief is written, because the
+   repository then includes the outputs of tasks that already passed their
+   gates. Correct the brief before dispatch when a path is unresolved or seems
+   wrong. The orchestrator may add a clearly
    necessary supporting path to the task scope before dispatch, but it must
    record that path explicitly in the brief/output list; never silently broaden
    the scope.
@@ -179,10 +192,13 @@ merged original task specification verbatim and in plan order, then append only
 the combined dependency set and combined expected-output scope established in
 Step 0. Do not rewrite the underlying requirements.
 
-Carry the plan's confirmed requirements, constraints, non-goals, and important
-decisions into the brief verbatim, including negative constraints and
-behavior-affecting defaults, together with the acceptance evidence for each, so
-the worker and reviewer can verify them.
+After the task specification, add a constraints block holding the applicable
+confirmed requirements, constraints, non-goals, and important decisions from the
+plan, verbatim, including negative constraints and behavior-affecting defaults,
+together with the acceptance evidence for each, so the worker and reviewer can
+verify them. For a consolidated task, merge the blocks without dropping any
+entry. The dependency set and expected-output scope follow the constraints
+block.
 
 Expected outputs must identify every path the worker may create or modify,
 regardless of file type. Represent intentional operations explicitly when

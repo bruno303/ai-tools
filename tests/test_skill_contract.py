@@ -77,12 +77,25 @@ class SubagentPlanExecutionContractTests(unittest.TestCase):
     def test_expected_output_paths_are_validated_before_dispatch(self):
         for phrase in (
             "validate every expected output path against the repository",
-            "existing path at the exact declared location",
-            "existing or declared parent",
+            "exists at the exact declared location",
+            "a prerequisite task declares it as created",
+            "exists or is declared by a prerequisite",
+            "Check each task's paths again in Step 1a",
             "test-placement conventions",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.normalized_skill_text)
+
+    def test_plan_format_has_a_home_for_constraints_and_briefs_carry_them(self):
+        self.assertIn("## Constraints and acceptance evidence", self.skill_text)
+        for phrase in (
+            "add a constraints block",
+            "The dependency set and expected-output scope follow the constraints block",
+            "A constraint is applicable to a brief when it is global or names that task's paths or behavior",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, self.normalized_skill_text)
+        self.assertIn("a path an earlier task in the plan creates", self.normalized_plan_skill_text)
 
     def test_review_status_is_a_strict_protocol_not_an_inferred_pass(self):
         self.assertIn(
@@ -99,6 +112,17 @@ class SubagentPlanExecutionContractTests(unittest.TestCase):
             self.assertIn("protocol failure", prompt_text)
             self.assertIn("never report or infer a pass", prompt_text)
 
+    def test_malformed_verdict_retry_differs_between_task_and_final_review(self):
+        task_section = self.normalized_skill_text.split("#### Reviewer result handling")[1]
+        task_section = task_section.split("## Step 2")[0]
+        final_section = self.normalized_skill_text.split("## Step 2")[1].split("## Step 3")[0]
+
+        self.assertIn("gets exactly one retry", task_section)
+        self.assertIn("a malformed final-review verdict stops immediately and gets no retry", task_section)
+        self.assertNotIn("gets exactly one retry", final_section)
+        self.assertIn("a malformed final-review verdict gets no retry", final_section)
+        self.assertIn("stop and report it immediately", final_section)
+
     def test_review_findings_require_evidence_and_a_baseline_check(self):
         for phrase in (
             "verify the baseline behavior",
@@ -112,7 +136,8 @@ class SubagentPlanExecutionContractTests(unittest.TestCase):
             self.normalized_reviewer_prompt_text,
             self.normalized_final_reviewer_prompt_text,
         ):
-            self.assertIn("evidence:", prompt_text)
+            schema = prompt_text.split("FINDINGS: - severity:")[1].split("```")[0]
+            self.assertIn("issue: ... evidence: ... fix: ...", schema)
             self.assertIn("baseline behavior", prompt_text)
 
     def test_progress_updates_are_limited_to_meaningful_events(self):
