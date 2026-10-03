@@ -37,6 +37,14 @@ reviewer profile controls model and reasoning settings.
 - Test coverage is adequate for the change
 - Import paths and dependencies are correct
 
+### Findings and Evidence
+- Every finding includes concrete evidence: the exact file and symbol or line,
+  plus the spec, contract, or baseline behavior it violates.
+- Verify baseline behavior before calling something a regression. Do not
+  attribute unchanged pre-existing behavior to the change without evidence that
+  the change introduces or exposes it.
+- Report only actionable defects, not stylistic preferences.
+
 ## Response Format
 
 Return exactly this handback structure:
@@ -49,8 +57,12 @@ FINDINGS:
   file: ...
   line: ...
   issue: ...
+  evidence: ...
   fix: ...
 ```
+
+Use only those two status values. A missing, malformed, or different status is a
+protocol failure; never report or infer a pass from an ambiguous verdict.
 
 Use `STATUS: PASSED` only when there are no high or medium findings. Use
 `STATUS: CHANGES_REQUESTED` when any high or medium finding exists or the review
@@ -67,11 +79,13 @@ FINDINGS:
   file: src/users.ts
   line: 42
   issue: endpoint returns 200 instead of 201 on create
+  evidence: brief declares 201; baseline returned 201 and this diff changed it to 200
   fix: return 201 for successful creation
 - severity: low
   file: src/users.ts
   line: 18
   issue: error messages are generic
+  evidence: no field names, unlike the existing validation helper
   fix: consider including field names
 ```
 

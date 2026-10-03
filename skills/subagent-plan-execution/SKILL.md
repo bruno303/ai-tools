@@ -100,13 +100,22 @@ Before dispatching workers:
    merged task specifications verbatim, in plan order, followed only by the
    combined dependency set and combined expected-output scope needed to execute
    them as one task. Do not rewrite or summarize away any original requirement.
-4. Record each task's dependency set and expected writable file scope.
-5. Before dispatch, validate the declared writable scope against the task's
-   direct contracts/callers/configuration when this can be done cheaply. The
-   orchestrator may add a clearly necessary supporting path to the task scope
-   before dispatch, but it must record that path explicitly in the brief/output
-   list; never silently broaden the scope.
-6. Capture an implementation baseline after the plan file has been created and
+4. Preserve the plan's confirmed requirements, constraints, non-goals, and
+   important decisions in every applicable brief, including negative
+   constraints and defaults that affect behavior, together with the acceptance
+   evidence that shows each is met.
+5. Record each task's dependency set and expected writable file scope.
+6. Before dispatch, validate the declared writable scope against the task's
+   direct contracts/callers/configuration when this can be done cheaply, and
+   validate every expected output path against the repository: an edit must name
+   an existing path at the exact declared location, and a new path must have an
+   existing or declared parent plus a location and naming that match repository
+   and test-placement conventions. Correct the brief before dispatch when a
+   path is unresolved or seems wrong. The orchestrator may add a clearly
+   necessary supporting path to the task scope before dispatch, but it must
+   record that path explicitly in the brief/output list; never silently broaden
+   the scope.
+7. Capture an implementation baseline after the plan file has been created and
    before the first task brief. Capture each task baseline after that task's
    brief has been created and verified, but before its worker is dispatched. A
    task baseline must represent the current worktree, not only `HEAD`, because
@@ -169,6 +178,11 @@ specification verbatim from the plan. For a consolidated task, include each
 merged original task specification verbatim and in plan order, then append only
 the combined dependency set and combined expected-output scope established in
 Step 0. Do not rewrite the underlying requirements.
+
+Carry the plan's confirmed requirements, constraints, non-goals, and important
+decisions into the brief verbatim, including negative constraints and
+behavior-affecting defaults, together with the acceptance evidence for each, so
+the worker and reviewer can verify them.
 
 Expected outputs must identify every path the worker may create or modify,
 regardless of file type. Represent intentional operations explicitly when
@@ -279,10 +293,21 @@ stage.
 
 #### Reviewer result handling
 
+Accept only the status values declared by the reviewer contract: `STATUS: PASSED`
+and `STATUS: CHANGES_REQUESTED`. A missing, malformed, or different status is a
+protocol failure. Do not infer a pass.
+
 | Response | Action |
 |---|---|
 | **`STATUS: PASSED`** | Proceed to the task handback gate. |
 | **`STATUS: CHANGES_REQUESTED`** | Dispatch one fresh `executor` fixer for a single consolidated fix pass containing the findings. It may modify only the declared expected outputs and its task report; it must not modify generated diff artifacts. The fixer must rerun the focused verification command and update the report. Regenerate the scoped diff if an updated artifact is needed. Do not re-review the task. |
+| Missing, malformed, or unrecognized status | Protocol failure. Do not infer a pass. A malformed task-review verdict gets exactly one retry: re-dispatch the reviewer once with the reviewer contract. If the status is still absent or unrecognized, stop the task and report the protocol failure. |
+
+A task-review verdict gets one retry because a task gate is per-task and a
+repeated scoped review is bounded. This differs from the final aggregate review
+in Step 2: a malformed final-review verdict stops immediately and gets no retry,
+because that review is the single final aggregate gate and there is no second
+aggregate review to fall back on.
 
 If the reviewer flags something that is demonstrably correct (for example,
 existing behavior compiles, tests pass, and follows the contract), reject that
@@ -335,14 +360,21 @@ the `reviewer` profile and:
 That reviewer must apply the full `code-review` skill and inspect the feature
 end-to-end. This is the only full aggregate review.
 
+Accept only the final reviewer status values from its contract: `STATUS: PASSED`
+and `STATUS: CHANGES_REQUESTED`. A missing, malformed, or different status is a
+protocol failure; do not infer a pass — stop and report it immediately. Unlike
+the task-review verdict, a malformed final-review verdict gets no retry: this is
+the single final aggregate gate, so there is no second aggregate review to fall
+back on and no automatic re-review loop.
+
 If the final reviewer returns `STATUS: PASSED`, proceed to the final quality
 gate. If it returns `STATUS: CHANGES_REQUESTED`, dispatch one final
 consolidated fixer with the `executor` profile and all critical, high, and
 medium findings plus practical low findings. The fixer may not edit generated
-diff artifacts. If it returns `STATUS: OK`, regenerate the aggregate artifact
-if needed and run the final quality gate. If it returns `STATUS: BLOCKED`, stop
-and report the unresolved blocker; do not dispatch another reviewer or
-automatic fix loop.
+diff artifacts. If the fixer returns `STATUS: OK`, regenerate the aggregate
+artifact if needed and run the final quality gate. If it returns
+`STATUS: BLOCKED`, stop and report the unresolved blocker; do not dispatch
+another reviewer or automatic fix loop.
 
 ## Step 3: Final quality gate
 
@@ -372,6 +404,8 @@ default configuration.
 - Pass artifact paths, not pasted specs, reports, or diffs.
 - Read only verdicts from worker responses: `DONE`/`BLOCKED`, reviewer status,
   findings, and verification results.
+- Update the user only for meaningful discoveries, decisions, blockers, and
+  completion; do not narrate routine task-by-task progress.
 - Do not reread completed task details after their gate passes.
 - At roughly 70% context usage, checkpoint completed tasks, finish the current
   task, and warn the user.
