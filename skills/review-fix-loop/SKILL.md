@@ -73,8 +73,13 @@ Pass the reviewer:
 - Previous findings, fixes, disputed findings with evidence, and verification
   results. Ask for independent reassessment, not acceptance of the main agent's
   conclusions.
-- Instructions to follow `code-review`, report only actionable evidence-backed
-  findings, and inspect relevant feature context and tests.
+- Instructions to load and use the `code-review` skill before reviewing. The
+  reviewer must invoke the skill-loading tool itself; mentioning the skill name
+  is not sufficient. If skill loading is unavailable, provide the complete
+  `code-review` skill instructions in the reviewer context. If neither is
+  possible, stop as blocked rather than perform an unguided review. Apply that
+  skill to report only actionable evidence-backed findings and inspect relevant
+  feature context and tests.
 - Explicit read-only instructions: do not modify files, apply fixes, commit,
   push, or mutate external state. Report checks performed and any review gaps.
 

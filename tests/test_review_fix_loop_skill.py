@@ -41,6 +41,10 @@ class ReviewFixLoopSkillContractTests(unittest.TestCase):
             "do not modify files", "The main agent itself evaluates and fixes findings",
             "Do not delegate fixes", "STATUS: NO_FINDINGS | FINDINGS | BLOCKED",
             "Evidence:", "REVIEW_GAPS:", "independent reassessment",
+            "load and use the `code-review` skill before reviewing",
+            "reviewer must invoke the skill-loading tool itself",
+            "provide the complete `code-review` skill instructions",
+            "stop as blocked rather than perform an unguided review",
         ):
             self.assertIn(rule, self.normalized)
         for model in ("gpt-5.6", "haiku", "sonnet", "opencode/"):
