@@ -104,39 +104,43 @@ class DesignArtifactsContractTests(unittest.TestCase):
             with self.subTest(rule=rule):
                 self.assertIn(rule, self.open_pr)
 
-    def test_prepare_pr_review_consumes_diagrams_instead_of_authoring_them(self):
+    def test_prepare_pr_review_treats_diagrams_as_optional_aids(self):
         for rule in (
             "## Diagrams",
-            "A diagram shipped with the PR is evidence about the design.",
-            "do not manufacture one and present it as the design",
-            "A missing diagram is a finding about the PR, not a task for the reviewer.",
-            "Do not spend review effort redrawing what the code already states.",
+            "A diagram is a review aid, not a requirement.",
+            "Never treat its absence as a finding",
+            "build one if the change is easier to explain that way",
+            "Reconstructed from the diff, not the approved design.",
+            "a component view (modules and dependency direction, 3 to 12 nodes)",
             "report divergence under **Decisions to validate**",
         ):
             with self.subTest(rule=rule):
                 self.assertIn(rule, self.prepare)
-        for authoring_detail in ("mmdc", "3 to 12 nodes", "Do not draw files, functions"):
-            with self.subTest(authoring_detail=authoring_detail):
-                self.assertNotIn(authoring_detail, self.prepare)
+        for forbidden in ("A missing diagram is a finding", "do not manufacture one"):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, self.prepare)
 
-    def test_code_review_compares_code_against_recorded_artifacts(self):
+    def test_code_review_treats_artifacts_as_optional_evidence(self):
         for rule in (
-            "### Compare against recorded design artifacts",
+            "### Compare against recorded design artifacts, when they exist",
             "Does the code implement the pattern selected for the named force",
             "Does dependency direction in the code match the component diagram?",
             "Does the flow match the sequence diagram",
-            "Silence is the failure mode; deviation is not.",
-            "When no artifact exists, review the structure on its own merits",
+            "That is not a gap to report.",
+            "do not require a plan, a pattern decision, or a diagram before reviewing",
         ):
             with self.subTest(rule=rule):
                 self.assertIn(rule, self.review)
+        for forbidden in ("Silence is the failure mode",):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, self.review)
 
     def test_readme_lists_the_artifact_pipeline_in_order(self):
         for phrase in (
             "force-gated pattern decision",
             "`skills/open-pr/SKILL.md`",
-            "the PR's diagrams as evidence",
-            "conformance to recorded pattern decisions and diagrams",
+            "diagrams where useful",
+            "using recorded plans and diagrams as evidence when present",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.readme)

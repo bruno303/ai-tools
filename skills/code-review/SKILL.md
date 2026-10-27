@@ -112,10 +112,10 @@ defensible reason to differ.
 
 Do not flag a difference merely because another design is possible.
 
-### Compare against recorded design artifacts
+### Compare against recorded design artifacts, when they exist
 
-When the change has an implementation plan, RFC, or PR description that records a
-pattern decision or a component/sequence diagram, treat those as review criteria:
+Some changes arrive with a plan, RFC, or PR description that records a pattern
+decision or a component/sequence diagram. When they do, use them as evidence:
 
 - Does the code implement the pattern selected for the named force, or solve the
   problem a different way without saying so?
@@ -123,12 +123,14 @@ pattern decision or a component/sequence diagram, treat those as review criteria
 - Does the flow match the sequence diagram, including ordering, transaction
   boundaries, side effects, and failure handling?
 
-Divergence is not automatically a defect. Report it when the code is wrong, or
-when the artifact is now stale and would mislead the next reader. Silence is the
-failure mode; deviation is not.
+Most pull requests have no such artifacts — especially ones you did not write.
+That is not a gap to report. Review the structure on its own merits, as you would
+any other change, and do not require a plan, a pattern decision, or a diagram
+before reviewing.
 
-When no artifact exists, review the structure on its own merits and do not demand
-that one be produced.
+Divergence is not automatically a defect. Report it when the code is wrong, or
+when the artifact is now stale and would mislead the next reader. A deviation you
+cannot tie to a consequence is a preference, not a finding.
 
 ---
 
@@ -420,8 +422,8 @@ as review criteria.
 
 Mention the relevant `AGENTS.md` or `CLAUDE.md` guidance and existing code patterns when useful.
 
-When the change carried a recorded pattern decision or diagram, state whether the
-code matched it and name any divergence.
+When the change arrived with recorded decisions or diagrams, note whether the code
+matched them. Omit this otherwise.
 
 ## Findings
 
