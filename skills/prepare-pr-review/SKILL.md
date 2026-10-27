@@ -191,19 +191,10 @@ guaranteed correctness.
 ### 4. Trace critical flows
 
 Identify the small number of end-to-end paths that best represent the feature.
-
-Example:
-
-```text
-HTTP handler
-  -> application use case
-  -> repository
-  -> transaction
-  -> event publication
-```
-
-Include the changed files or symbols involved. Prioritize boundary crossings and
-paths where partial failure could create inconsistent state.
+Express them as diagrams rather than prose when the flow has more than three
+steps — see [Diagrams](#diagrams). Include the changed files or symbols involved.
+Prioritize boundary crossings and paths where partial failure could create
+inconsistent state.
 
 ### 5. Surface decisions worth human judgment
 
@@ -252,6 +243,86 @@ Examples:
 
 Avoid generic questions such as "Is this code readable?"
 
+## Diagrams
+
+Use at most two diagrams, each answering a different question. Render them as
+Mermaid; GitHub renders fenced `mermaid` blocks in PR bodies and markdown files.
+
+### Sourcing rule
+
+Prefer the diagram from the implementation plan or RFC. It represents an approved
+design, so review can compare code against it.
+
+When no plan diagram exists, author one from the diff and label it:
+
+> Derived from the diff at review time, not an approved design.
+
+Never present a diff-derived diagram as if it were the approved structure. A
+diagram that restates the model's own guess launders uncertainty into apparent
+fact, which is worse than having no diagram.
+
+When the code diverges from the plan's diagram, surface it under **Decisions to
+validate**; use **Blocking observation** only when the divergence is clearly a
+defect. Divergence is often a stale plan, and that still matters.
+
+### Component diagram
+
+Box = module, boundary, or process. Arrow = dependency direction.
+
+```mermaid
+flowchart LR
+  http[HTTP handlers] --> usecase[Application use cases]
+  usecase --> domain[Domain]
+  usecase --> port[Ledger port]
+  port -.implemented by.-> pg[Postgres adapter]
+```
+
+- 3 to 12 nodes. Above that, split by concern instead of adding detail.
+- One edge per real dependency, not per call.
+- Label an edge only when its kind is not obvious (sync, async, event, batch).
+- Do not draw files, functions, or classes unless the change is about exactly
+  those.
+
+### Sequence diagram
+
+One diagram, for the riskiest flow. Include the partial-failure branch, not only
+the happy path.
+
+```mermaid
+sequenceDiagram
+  participant API
+  participant UseCase
+  participant DB
+  API->>UseCase: SubmitOrder
+  UseCase->>DB: BEGIN
+  UseCase->>DB: INSERT order
+  alt write fails
+    UseCase->>DB: ROLLBACK
+    UseCase-->>API: 503
+  else success
+    UseCase->>DB: COMMIT
+    UseCase-->>API: 201
+  end
+```
+
+- Show the ordering that matters: validation, transaction boundaries, side
+  effects, retries, compensation.
+- Stop at component boundaries instead of drawing every internal call.
+- Name participants after modules, not frameworks.
+
+### Rendering
+
+Both diagrams must render. Mermaid fails silently on reserved words, unescaped
+parentheses in labels, and `end` inside labels.
+
+Render locally with `mmdc -i diagram.mmd -o diagram.svg` (`@mermaid-js/mermaid-cli`),
+or confirm the fenced block renders on GitHub. If neither is possible, say the
+rendering is unverified instead of implying it works.
+
+Keep the diagram in the PR body. When the change is substantial, also place it in
+the repository (`docs/` or an ADR) so the next reader and the next agent inherit
+it.
+
 ## Output
 
 Use this structure and omit empty sections:
@@ -268,8 +339,15 @@ Only guarantees that materially guide review.
 Group areas under `HIGH`, `MEDIUM`, and `LOW / SKIM`, with a reason for
 each classification.
 
+#### Diagrams
+At most two Mermaid diagrams: a component view of boundaries and dependency
+direction, and a sequence diagram for the riskiest flow including its
+partial-failure branch. State when a diagram was derived from the diff rather
+than an approved plan.
+
 #### Critical flows
-Show the most important end-to-end paths.
+Show the most important end-to-end paths, referencing the diagrams above where
+they cover the same path.
 
 #### Decisions to validate
 List meaningful behavior, architecture, reliability, or contract decisions.
@@ -287,6 +365,8 @@ while preparing the guide.
 ## Principles
 
 - Allocate attention instead of maximizing review coverage.
+- Prefer a diagram over prose when explaining structure or ordering.
+- Never present a diff-derived diagram as the approved design.
 - Prefer behavior and decisions over file count.
 - Treat risk as contextual, not as a numeric score.
 - Explain why an area deserves deep review or only a skim.
