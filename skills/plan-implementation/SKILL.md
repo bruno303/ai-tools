@@ -77,6 +77,22 @@ concerns", "cleaner", "more scalable". They select nothing.
 The recorded decision is a review criterion: `code-review` checks the code
 against it, and a silent divergence is a finding.
 
+# Diagrams
+
+Author the component and sequence diagrams here, while planning — not at PR time.
+The plan is the authority a reviewer compares the code against.
+
+- Component: modules and dependency direction, 3 to 12 nodes, one edge per real
+  dependency, no class diagrams.
+- Sequence: one, for the riskiest flow, including the partial-failure branch, so
+  ordering, transaction boundaries, and compensation stay visible.
+- Validate that each Mermaid block renders before finalizing the plan.
+- Skip diagrams only when the change is localized enough that the file list
+  already states the structure.
+
+`open-pr` copies these into the PR body; `code-review` compares the code against
+them.
+
 # Rules
 - Keep the plan grounded in existing repo patterns.
 - Separate confirmed requirements from open questions.
@@ -93,6 +109,7 @@ Provide:
 - relevant requirements, constraints, non-goals, and important decisions
 - open questions still pending
 - proposed design, including the pattern decision or an explicit `none`
+- component and sequence diagrams, unless the change is localized enough to skip them
 - file-by-file implementation plan grounded in repository inspection
 - test strategy
 - risks, migrations, and rollout notes

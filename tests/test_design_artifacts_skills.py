@@ -4,9 +4,11 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PLAN = ROOT / "skills" / "plan-implementation" / "SKILL.md"
-PREPARE = ROOT / "skills" / "prepare-pr-review" / "SKILL.md"
-REVIEW = ROOT / "skills" / "code-review" / "SKILL.md"
+SKILLS = ROOT / "skills"
+PLAN = SKILLS / "plan-implementation" / "SKILL.md"
+OPEN_PR = SKILLS / "open-pr" / "SKILL.md"
+PREPARE = SKILLS / "prepare-pr-review" / "SKILL.md"
+REVIEW = SKILLS / "code-review" / "SKILL.md"
 
 
 def normalize(text: str) -> str:
@@ -16,12 +18,10 @@ def normalize(text: str) -> str:
 class DesignArtifactsContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.plan = PLAN.read_text(encoding="utf-8")
-        cls.plan_flat = normalize(cls.plan)
-        cls.prepare = PREPARE.read_text(encoding="utf-8")
-        cls.prepare_flat = normalize(cls.prepare)
-        cls.review = REVIEW.read_text(encoding="utf-8")
-        cls.review_flat = normalize(cls.review)
+        cls.plan = normalize(PLAN.read_text(encoding="utf-8"))
+        cls.open_pr = normalize(OPEN_PR.read_text(encoding="utf-8"))
+        cls.prepare = normalize(PREPARE.read_text(encoding="utf-8"))
+        cls.review = normalize(REVIEW.read_text(encoding="utf-8"))
         cls.readme = (ROOT / "README.md").read_text(encoding="utf-8")
 
     def test_plan_records_pattern_decision_only_against_a_named_force(self):
@@ -37,7 +37,7 @@ class DesignArtifactsContractTests(unittest.TestCase):
             "These are not forces",
         ):
             with self.subTest(rule=rule):
-                self.assertIn(rule, self.plan_flat)
+                self.assertIn(rule, self.plan)
 
     def test_plan_bounds_pattern_ceremony_and_marks_deviations(self):
         for rule in (
@@ -49,55 +49,75 @@ class DesignArtifactsContractTests(unittest.TestCase):
             "If an approved RFC or design document already settles the pattern",
         ):
             with self.subTest(rule=rule):
-                self.assertIn(rule, self.plan_flat)
+                self.assertIn(rule, self.plan)
 
     def test_plan_pattern_decision_is_a_review_criterion(self):
         self.assertIn(
             "The recorded decision is a review criterion: `code-review` checks the "
             "code against it, and a silent divergence is a finding.",
-            self.plan_flat,
+            self.plan,
         )
-        self.assertIn("including the pattern decision or an explicit `none`", self.plan_flat)
+        self.assertIn("including the pattern decision or an explicit `none`", self.plan)
 
-    def test_prepare_pr_review_caps_diagrams_and_their_purpose(self):
+    def test_plan_authors_the_diagrams_instead_of_deferring_them(self):
+        for rule in (
+            "# Diagrams",
+            "Author the component and sequence diagrams here, while planning — "
+            "not at PR time.",
+            "3 to 12 nodes",
+            "including the partial-failure branch",
+            "Validate that each Mermaid block renders before finalizing the plan.",
+            "`open-pr` copies these into the PR body",
+        ):
+            with self.subTest(rule=rule):
+                self.assertIn(rule, self.plan)
+        self.assertIn(
+            "component and sequence diagrams, unless the change is localized enough",
+            self.plan,
+        )
+
+    def test_open_pr_owns_the_author_side_body(self):
+        for rule in (
+            "name: open-pr",
+            "Omit a section rather than fill it.",
+            "### Why",
+            "### What changed",
+            "### Risk and blast radius",
+            "### Verification",
+            "Draft `Why`, then `What changed`, then the rest.",
+            "One PR, one reviewable intent.",
+            "Never claim a check you did not run",
+            "--body-file body.md",
+            "Never present a diagram written after the fact as the approved design.",
+            "mmdc -i diagram.mmd -o diagram.svg",
+        ):
+            with self.subTest(rule=rule):
+                self.assertIn(rule, self.open_pr)
+
+    def test_open_pr_points_at_the_review_side_instead_of_duplicating_it(self):
+        for rule in (
+            "This skill owns the author side.",
+            "To review someone else's PR, use `prepare-pr-review`.",
+            "the full reading guide belongs to `prepare-pr-review`",
+            "state the divergence and the reason",
+        ):
+            with self.subTest(rule=rule):
+                self.assertIn(rule, self.open_pr)
+
+    def test_prepare_pr_review_consumes_diagrams_instead_of_authoring_them(self):
         for rule in (
             "## Diagrams",
-            "Use at most two diagrams",
-            "### Component diagram",
-            "Box = module, boundary, or process. Arrow = dependency direction.",
-            "3 to 12 nodes.",
-            "One edge per real dependency, not per call.",
-            "### Sequence diagram",
-            "Include the partial-failure branch",
-            "Stop at component boundaries",
-            "Do not draw files, functions, or classes",
+            "A diagram shipped with the PR is evidence about the design.",
+            "do not manufacture one and present it as the design",
+            "A missing diagram is a finding about the PR, not a task for the reviewer.",
+            "Do not spend review effort redrawing what the code already states.",
+            "report divergence under **Decisions to validate**",
         ):
             with self.subTest(rule=rule):
-                self.assertIn(rule, self.prepare_flat)
-
-    def test_prepare_pr_review_distinguishes_derived_from_approved_diagrams(self):
-        for rule in (
-            "Prefer the diagram from the implementation plan or RFC",
-            "Derived from the diff at review time, not an approved design.",
-            "launders uncertainty into apparent fact",
-            "Never present a diff-derived diagram as if it were the approved structure",
-            "surface it under **Decisions to validate**",
-            "## Principles",
-            "Never present a diff-derived diagram as the approved design.",
-        ):
-            with self.subTest(rule=rule):
-                self.assertIn(rule, self.prepare_flat)
-
-    def test_prepare_pr_review_requires_rendering_evidence(self):
-        for rule in (
-            "Both diagrams must render.",
-            "Mermaid fails silently",
-            "mmdc -i diagram.mmd -o diagram.svg",
-            "say the rendering is unverified",
-            "also place it in the repository",
-        ):
-            with self.subTest(rule=rule):
-                self.assertIn(rule, self.prepare_flat)
+                self.assertIn(rule, self.prepare)
+        for authoring_detail in ("mmdc", "3 to 12 nodes", "Do not draw files, functions"):
+            with self.subTest(authoring_detail=authoring_detail):
+                self.assertNotIn(authoring_detail, self.prepare)
 
     def test_code_review_compares_code_against_recorded_artifacts(self):
         for rule in (
@@ -109,16 +129,25 @@ class DesignArtifactsContractTests(unittest.TestCase):
             "When no artifact exists, review the structure on its own merits",
         ):
             with self.subTest(rule=rule):
-                self.assertIn(rule, self.review_flat)
+                self.assertIn(rule, self.review)
 
-    def test_readme_advertises_the_new_behavior(self):
+    def test_readme_lists_the_artifact_pipeline_in_order(self):
         for phrase in (
             "force-gated pattern decision",
-            "Mermaid component and sequence diagrams",
+            "`skills/open-pr/SKILL.md`",
+            "the PR's diagrams as evidence",
             "conformance to recorded pattern decisions and diagrams",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.readme)
+
+        plan_at = self.readme.index("skills/plan-implementation/SKILL.md")
+        open_pr_at = self.readme.index("skills/open-pr/SKILL.md")
+        review_at = self.readme.index("skills/code-review/SKILL.md")
+        prepare_at = self.readme.index("skills/prepare-pr-review/SKILL.md")
+        self.assertLess(plan_at, open_pr_at)
+        self.assertLess(open_pr_at, review_at)
+        self.assertLess(review_at, prepare_at)
 
 
 if __name__ == "__main__":
