@@ -112,6 +112,26 @@ defensible reason to differ.
 
 Do not flag a difference merely because another design is possible.
 
+### Compare against recorded design artifacts, when they exist
+
+Some changes arrive with a plan, RFC, or PR description that records a pattern
+decision or a component/sequence diagram. When they do, use them as evidence:
+
+- Does the code implement the pattern selected for the named force, or solve the
+  problem a different way without saying so?
+- Does dependency direction in the code match the component diagram?
+- Does the flow match the sequence diagram, including ordering, transaction
+  boundaries, side effects, and failure handling?
+
+Most pull requests have no such artifacts — especially ones you did not write.
+That is not a gap to report. Review the structure on its own merits, as you would
+any other change, and do not require a plan, a pattern decision, or a diagram
+before reviewing.
+
+Divergence is not automatically a defect. Report it when the code is wrong, or
+when the artifact is now stale and would mislead the next reader. A deviation you
+cannot tie to a consequence is a preference, not a finding.
+
 ---
 
 # Review Dimensions
@@ -401,6 +421,9 @@ Summarize only the relevant project architecture, patterns, and conventions used
 as review criteria.
 
 Mention the relevant `AGENTS.md` or `CLAUDE.md` guidance and existing code patterns when useful.
+
+When the change arrived with recorded decisions or diagrams, note whether the code
+matched them. Omit this otherwise.
 
 ## Findings
 

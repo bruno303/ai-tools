@@ -191,19 +191,9 @@ guaranteed correctness.
 ### 4. Trace critical flows
 
 Identify the small number of end-to-end paths that best represent the feature.
-
-Example:
-
-```text
-HTTP handler
-  -> application use case
-  -> repository
-  -> transaction
-  -> event publication
-```
-
-Include the changed files or symbols involved. Prioritize boundary crossings and
-paths where partial failure could create inconsistent state.
+Use the PR's diagram when one exists, or reconstruct one when that explains the
+path better than a chain. Include the changed files or symbols involved. Prioritize
+boundary crossings and paths where partial failure could create inconsistent state.
 
 ### 5. Surface decisions worth human judgment
 
@@ -252,6 +242,27 @@ Examples:
 
 Avoid generic questions such as "Is this code readable?"
 
+## Diagrams
+
+A diagram is a review aid, not a requirement. Never treat its absence as a
+finding, and never make the review depend on one.
+
+- When the PR ships a diagram, or links a plan, RFC, or ADR containing one, use it:
+  that is evidence about the intended design. Compare the code against it and
+  report divergence under **Decisions to validate** — it is either a bug or a
+  stale artifact, and both matter.
+- When it ships none, build one if the change is easier to explain that way. That
+  diagram is your reconstruction from the diff, so label it:
+
+  > Reconstructed from the diff, not the approved design.
+
+  Never present a reconstruction as the design the author approved.
+- If you build one: a component view (modules and dependency direction, 3 to 12
+  nodes) and, when ordering is the risk, one sequence diagram for that flow
+  including its partial-failure branch. No class diagrams.
+- Validate any Mermaid block before publishing (`mmdc -i d.mmd -o d.svg`, or
+  confirm on GitHub). An unrendered block fails silently.
+
 ## Output
 
 Use this structure and omit empty sections:
@@ -269,7 +280,8 @@ Group areas under `HIGH`, `MEDIUM`, and `LOW / SKIM`, with a reason for
 each classification.
 
 #### Critical flows
-Show the most important end-to-end paths.
+Show the most important end-to-end paths, referencing a diagram when one is
+available or reconstructed.
 
 #### Decisions to validate
 List meaningful behavior, architecture, reliability, or contract decisions.
@@ -287,6 +299,7 @@ while preparing the guide.
 ## Principles
 
 - Allocate attention instead of maximizing review coverage.
+- Treat diagrams as aids: use the PR's, or reconstruct and label your own.
 - Prefer behavior and decisions over file count.
 - Treat risk as contextual, not as a numeric score.
 - Explain why an area deserves deep review or only a skim.

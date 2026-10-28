@@ -34,13 +34,14 @@ reasoning-effort fields in the corresponding files under `opencode/agents/`,
 
 - **`skills/analyze-codebase/SKILL.md`** - map relevant files, call flow, boundaries, and patterns before edits.
 - **`skills/write-rfc/SKILL.md`** - turn requirements and repository evidence into a proportional RFC, clarifying only material decisions before planning.
-- **`skills/plan-implementation/SKILL.md`** - create a concrete implementation plan, including risks and test strategy.
+- **`skills/plan-implementation/SKILL.md`** - create a concrete implementation plan with a force-gated pattern decision, component/sequence diagrams, risks, and test strategy.
 - **`skills/rfc-implementation-plan/SKILL.md`** - turn an approved or mostly-final RFC into an implementation-ready, repository-grounded plan compatible with normal harness implementation and, when explicitly invoked, `subagent-plan-execution`.
 - **`skills/write-tests/SKILL.md`** - add or update behavior-focused tests at the right level.
 - **`skills/run-verification/SKILL.md`** - run the smallest relevant checks first, then expand as needed.
-- **`skills/code-review/SKILL.md`** - review code for correctness, regressions, architecture fit, and missing tests.
+- **`skills/open-pr/SKILL.md`** - turn a verified change into a PR whose body states intent, diagrams, blast radius, and the checks actually run instead of restating the diff.
+- **`skills/code-review/SKILL.md`** - review code for correctness, regressions, architecture fit, and missing tests, using recorded plans and diagrams as evidence when present.
 - **`skills/review-fix-loop/SKILL.md`** - explicitly run `/review-fix-loop [max-loops] [PR URL]` for read-only reviewer rounds and main-agent fixes, stopping when clean or at the cap without an extra final review.
-- **`skills/prepare-pr-review/SKILL.md`** - turn a large PR into a focused human review guide with risk areas, critical flows, reading order, and reviewer questions without duplicating a full code review.
+- **`skills/prepare-pr-review/SKILL.md`** - turn a large PR into a focused human review guide with risk areas, diagrams where useful, reading order, and reviewer questions without duplicating a full code review.
 - **`skills/debug-failure/SKILL.md`** - isolate likely root cause for failing tests, builds, CI, or runtime behavior.
 - **`skills/api-change-checklist/SKILL.md`** - checklist for API or contract changes.
 - **`skills/db-change-checklist/SKILL.md`** - checklist for schema, query, migration, and rollout risk.
