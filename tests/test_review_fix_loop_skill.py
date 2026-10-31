@@ -40,7 +40,8 @@ class ReviewFixLoopSkillContractTests(unittest.TestCase):
             "fresh subagent", "named `reviewer` profile", "MISSING_AGENT_PROFILE: reviewer",
             "do not modify files", "The main agent itself evaluates and fixes findings",
             "Do not delegate fixes", "STATUS: NO_FINDINGS | FINDINGS | BLOCKED",
-            "Evidence:", "REVIEW_GAPS:", "independent reassessment",
+            "Evidence:", "Evidence grade:", "Failure path:", "Check:", "REVIEW_GAPS:",
+            "independent reassessment",
             "load and use the `code-review` skill before reviewing",
             "reviewer must invoke the skill-loading tool itself",
             "provide the complete `code-review` skill instructions",
@@ -49,6 +50,20 @@ class ReviewFixLoopSkillContractTests(unittest.TestCase):
             self.assertIn(rule, self.normalized)
         for model in ("gpt-5.6", "haiku", "sonnet", "opencode/"):
             self.assertNotIn(model, self.skill)
+
+    def test_fix_validation_and_change_intent(self):
+        for rule in (
+            "Reproduce the reviewer's recorded check first",
+            "mark it `DISPUTED`",
+            "`git blame` the exact lines from the base branch",
+            "require stronger evidence before changing it",
+            "Re-run the finding's recorded check",
+            "revert the edit and mark the finding `FIX_FAILED`",
+            "Record the before and after output",
+            "Findings fixed, disputed, failed, and unresolved.",
+            "Observations recorded but not fixed.",
+        ):
+            self.assertIn(rule, self.normalized)
 
     def test_budget_and_truthful_stop_rules(self):
         for rule in (

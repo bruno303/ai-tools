@@ -132,6 +132,40 @@ Divergence is not automatically a defect. Report it when the code is wrong, or
 when the artifact is now stale and would mislead the next reader. A deviation you
 cannot tie to a consequence is a preference, not a finding.
 
+## 4. Verify Findings
+
+Before writing the report, run a falsification pass over every candidate finding.
+Do not trust a claim because it reads plausibly; try to disprove it.
+
+For each candidate, record:
+
+- **Evidence**: the exact line, quote, or command output that supports the claim.
+- **Failure path**: a concrete trigger and the consequence in the current code.
+  If you cannot name a trigger, the item is an observation, not a finding.
+- **Scope**: whether the problem exists in the current code, or only if the code
+  or protocol changes later.
+- **Check**: the cheapest test, `grep`, type check, or call-path inspection that
+  could disprove the claim, and its result.
+
+Assign an evidence grade:
+
+- **Reproduced**: a command or test demonstrates the failure.
+- **Inspected**: the code path and contract prove the failure; no runnable
+  reproduction exists.
+- **Speculative**: plausible, but no concrete trigger in the current code.
+
+Only `Reproduced` and `Inspected` items may be reported as findings.
+`Speculative` items are observations at most; drop them unless the reader needs
+the future risk.
+
+When the harness supports subagents and the review is large (three or more
+findings) or touches a high-risk area (authentication, authorization, payments,
+persistence, protocol or wire compatibility), dispatch a fresh verifier with only
+the diff and the findings list. The verifier must reproduce each `Reproduced`
+claim or mark it `NEEDS-RECHECK`, and re-derive each `Inspected` claim from the
+code. Do not give the verifier the original reasoning. Treat a `NEEDS-RECHECK`
+result as unverified: demote the item to an observation or drop it.
+
 ---
 
 # Review Dimensions
@@ -315,7 +349,10 @@ Before reporting a finding, ask:
 
 > What realistic problem does this cause?
 
-If there is no meaningful answer, do not report it.
+If there is no meaningful answer, do not report it. If the consequence only
+exists after a future change to the code or protocol, record it as an observation
+instead of a finding. A latent risk is useful context, but it is not a defect in
+the change under review.
 
 Every finding must be:
 
@@ -389,12 +426,26 @@ File and relevant function, class, method, or line when possible.
 Explain precisely what is wrong.
 
 **Why it matters:**  
-Describe the realistic consequence.
+Describe the realistic impact.
 
 **Evidence:**  
 Reference the relevant code, project pattern, `AGENTS.md`/`CLAUDE.md` rule, test, contract,
 or conflicting behavior. For regression claims, include the baseline and
-changed behavior.
+changed behavior. Quote the exact line when possible.
+
+**Failure path:**  
+The concrete trigger that reaches the problem in the current code. If no trigger
+exists, the item is an observation, not a finding.
+
+**Evidence grade:**  
+`Reproduced` or `Inspected`. `Speculative` items are observations.
+
+**Check:**  
+The command, test, or inspection used to confirm or falsify the claim, and the
+result.
+
+**Scope:**  
+`Current behavior` or `Future risk (latent)`.
 
 **Suggested direction:**  
 Describe how the issue could be addressed without unnecessarily prescribing an
@@ -427,7 +478,7 @@ matched them. Omit this otherwise.
 
 ## Findings
 
-List findings ordered by severity:
+List only `Reproduced` and `Inspected` findings, ordered by severity:
 
 1. Critical
 2. High
@@ -441,6 +492,12 @@ Do not create findings to fill this section.
 If no meaningful issues are found, explicitly state:
 
 > No blocking or meaningful code quality issues found.
+
+## Observations
+
+List `Speculative` items and latent risks that are worth knowing but do not meet
+the finding bar. Do not assign severity or request changes for them. Omit this
+section when there is nothing to say.
 
 ## Overall assessment
 
@@ -479,6 +536,9 @@ Always follow these principles:
 - Do not review only the diff when surrounding context is needed.
 - Do not make speculative claims without evidence.
 - Do not generate findings just to appear thorough.
+- Prefer a smaller, verified report over a larger, plausible one.
+- A finding without a concrete failure path is an observation, not a finding.
+- Do not use a confidence number as a substitute for evidence.
 - Every reported issue must be defensible to the engineer who wrote the code.
 - When uncertain whether something is a defect or merely a preference, omit it
   unless repository evidence makes the issue concrete.
