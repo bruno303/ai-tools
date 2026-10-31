@@ -39,8 +39,8 @@ reasoning-effort fields in the corresponding files under `opencode/agents/`,
 - **`skills/write-tests/SKILL.md`** - add or update behavior-focused tests at the right level.
 - **`skills/run-verification/SKILL.md`** - run the smallest relevant checks first, then expand as needed.
 - **`skills/open-pr/SKILL.md`** - turn a verified change into a PR whose body states intent, diagrams, blast radius, and the checks actually run instead of restating the diff.
-- **`skills/code-review/SKILL.md`** - review code for correctness, regressions, architecture fit, and missing tests, using recorded plans and diagrams as evidence when present.
-- **`skills/review-fix-loop/SKILL.md`** - explicitly run `/review-fix-loop [max-loops] [PR URL]` for read-only reviewer rounds and main-agent fixes, stopping when clean or at the cap without an extra final review.
+- **`skills/code-review/SKILL.md`** - review code for correctness, regressions, architecture fit, and missing tests, using recorded plans and diagrams as evidence when present, and verify each finding with a concrete failure path before reporting it.
+- **`skills/review-fix-loop/SKILL.md`** - explicitly run `/review-fix-loop [max-loops] [PR URL]` for read-only reviewer rounds and main-agent fixes with a reproduction and test gate on every fix, stopping when clean or at the cap without an extra final review.
 - **`skills/prepare-pr-review/SKILL.md`** - turn a large PR into a focused human review guide with risk areas, diagrams where useful, reading order, and reviewer questions without duplicating a full code review.
 - **`skills/debug-failure/SKILL.md`** - isolate likely root cause for failing tests, builds, CI, or runtime behavior.
 - **`skills/api-change-checklist/SKILL.md`** - checklist for API or contract changes.

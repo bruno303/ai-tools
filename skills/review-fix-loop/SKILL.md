@@ -90,8 +90,11 @@ STATUS: NO_FINDINGS | FINDINGS | BLOCKED
 FINDINGS:
 - ID: stable identifier for tracking across rounds
   Severity: severity with rationale
+  Evidence grade: Reproduced | Inspected
   Location: file and line/range
   Evidence: concrete failure or contract violation
+  Failure path: concrete trigger and consequence
+  Check: command/test/inspection and its result
   Suggested correction: smallest appropriate change
 CHECKS: checks performed and results, or not run
 REVIEW_GAPS: unavailable context or checks affecting confidence, or none
@@ -113,12 +116,24 @@ The main agent itself evaluates and fixes findings. Do not delegate fixes to
 `executor` or another subagent.
 
 - Confirm each finding against the code and repository contracts before editing.
+  Reproduce the reviewer's recorded check first. If the check cannot be
+  reproduced and the finding has no concrete failure path, mark it `DISPUTED`
+  with the evidence and do not edit.
+- Check the intent of code a finding asks you to remove or alter: `git blame` the
+  exact lines from the base branch and read the commit message. If the behavior
+  was added deliberately (for example a hardening or null-check commit), quote
+  that intent and require stronger evidence before changing it.
 - Apply the smallest reliable fix for each valid finding, preserving project
   patterns and avoiding unrelated cleanup.
 - Use `write-tests` when adding or updating tests and `run-verification` for the
   smallest relevant checks. Load other applicable skills as needed.
-- Record each finding as fixed, disputed with evidence, or blocked. Do not silently
-  drop findings or declare the review clean based on your own disagreement.
+- Re-run the finding's recorded check and the smallest relevant test after the
+  edit. If the check still fails or a new failure appears, revert the edit and
+  mark the finding `FIX_FAILED`; do not report it as fixed. Record the before and
+  after output.
+- Record each finding as fixed, disputed, failed, or blocked, with its check
+  result. Do not silently drop findings or declare the review clean based on your
+  own disagreement.
 - If a finding needs an unresolved user decision, unsafe/destructive action, or
   unavailable dependency, pause and report the blocker instead of guessing.
 - Fix verification failures introduced by the changes before continuing. If
@@ -151,7 +166,8 @@ Keep the report concise and include:
   changes exist, report **nothing to review** instead.
 - Scope: local changes or PR URL, baseline, and working directory if isolated.
 - Reviewer calls used and maximum, or no numeric cap.
-- Findings fixed, disputed, and unresolved.
+- Findings fixed, disputed, failed, and unresolved.
+- Observations recorded but not fixed.
 - Verification performed, results, and checks not run.
 - Whether the latest fixes were reviewed. Only claim clean after an explicit,
   complete reviewer `NO_FINDINGS` result on the current scoped changes.
