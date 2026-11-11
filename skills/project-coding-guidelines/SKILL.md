@@ -31,6 +31,12 @@ Apply these principles across all tasks unless the repository explicitly defines
 - Avoid creating new patterns when an existing project pattern already solves the problem.
 - Prefer explicit, easy-to-follow code over generalized structures introduced too early.
 
+# Design principles and patterns
+- Load the `software-design` skill before adding an abstraction or changing dependency direction.
+- Use its SOLID guidance as a diagnostic for a concrete problem, not as a checklist.
+- Reuse the repository's existing pattern first; the simplest viable change still wins.
+- Record the chosen and rejected alternatives when a structural choice is material.
+
 # Reviewing structural changes
 When implementing or reviewing a change, check:
 - whether the code is in the correct layer or module

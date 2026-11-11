@@ -12,6 +12,8 @@ Use these defaults when reading, generating, or reviewing Next.js frontend code.
 - Detect whether the feature belongs to App Router or Pages Router.
 - Do not mix `app/` and `pages/` patterns casually inside the same feature.
 - Before adding code, inspect a few similar routes/components/tests and follow the local convention.
+- For language-neutral pattern selection, use the `software-design` skill; keep
+  framework-specific choices in this file.
 
 # Routing and file placement
 - Keep route entry files thin.

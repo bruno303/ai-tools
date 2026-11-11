@@ -38,7 +38,8 @@ Examples of details to clarify when relevant:
 2. Identify missing details that block a reliable plan.
 3. Ask the user targeted questions for those gaps.
 4. Propose the smallest viable design consistent with the repository, recording
-   the pattern decision defined below.
+   the pattern decision defined below. Use the `software-design` skill to name
+   the concrete force and compare candidate patterns when one is warranted.
 5. List file-by-file changes.
 6. Define test strategy, acceptance evidence, risks, and rollout concerns.
 
@@ -73,6 +74,11 @@ concerns", "cleaner", "more scalable". They select nothing.
   decision.
 - If an approved RFC or design document already settles the pattern decision,
   reference it instead of restating it.
+
+Use the `software-design` skill's `references/pattern-selection.md` when a force
+maps to more than one candidate pattern, and `references/patterns.md` for its
+tradeoffs and common misuse. The catalog is a reference, not a checklist: the
+gate above still decides whether a pattern is warranted.
 
 The recorded decision is a review criterion: `code-review` checks the code
 against it, and a silent divergence is a finding.
