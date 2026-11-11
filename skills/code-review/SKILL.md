@@ -252,6 +252,31 @@ Do not recommend abstractions merely for the sake of abstraction.
 Do not report subjective style preferences unless they materially affect
 readability or violate an established project convention.
 
+## Structural Design
+
+Check whether abstractions and patterns are justified by a concrete problem and
+whether existing project patterns were reused.
+
+When a change adds or changes a boundary, abstraction, wrapper, event flow,
+persistence layer, or dependency wiring, apply the `software-design` skill's
+`references/review-checklist.md`.
+
+Focus on:
+
+- abstractions that protect no real boundary or remove no meaningful duplication
+- hidden globals, singletons, or service-locator behavior
+- dependency direction and ownership of interfaces
+- repositories or units of work that leak persistence details or exist without a
+  real transaction boundary
+- events or observers creating hidden control flow where a direct call would be
+  clearer
+- pattern misuse or inconsistent application compared with the project
+- test coverage at the new seam
+
+Treat SOLID as a diagnostic for concrete risks, not a checklist. Do not flag a
+design merely because another pattern is possible or because a principle could
+be read as violated in the abstract.
+
 ## Feature Coherence
 
 Review the feature as a whole.

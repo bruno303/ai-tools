@@ -28,7 +28,8 @@ Build a concise map of the relevant area before planning or editing code.
 5. Identify the entry points, modules, and files likely involved.
 6. Trace the main call flow and dependency direction.
 7. Find interfaces, implementations, models, and integration boundaries.
-8. Note the patterns already used in this area.
+8. Note the patterns already used in this area. Use the `software-design` pattern
+   catalog to name them when that helps the parent, but do not recommend new ones.
 9. Highlight ambiguities, missing context, and likely change points.
 
 # Rules
@@ -36,6 +37,8 @@ Build a concise map of the relevant area before planning or editing code.
 - Focus on only the code relevant to the task.
 - Distinguish facts from hypotheses.
 - Do not recommend refactors unless they are directly relevant.
+- Keep analysis read-only: describe existing patterns, but leave design
+  recommendations to planning.
 - Delegate by default whenever reconnaissance is not already localized. Keep the work in the parent only when it meets the trivial threshold above or delegation is unavailable.
 - Never make model selection part of this skill or hard-code a model.
 - Limit reconnaissance to the relevant scope and stop once there is enough evidence to answer the task.

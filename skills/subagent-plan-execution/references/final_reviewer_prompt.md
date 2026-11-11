@@ -11,7 +11,10 @@ end-to-end, not only the individual tasks or isolated diff hunks.
 3. Read the aggregate diff at `{diff_path}`.
 4. Read every changed file and the relevant surrounding callers, contracts, and tests.
 5. Follow the `code-review` skill for repository inspection, architecture,
-   correctness, reliability, coverage, evidence, and severity. Do not modify files.
+   correctness, reliability, coverage, evidence, and severity. When the change
+   adds or changes an abstraction, boundary, event flow, persistence layer, or
+   dependency wiring, also apply the `software-design` skill's
+   `references/review-checklist.md`. Do not modify files.
 
 ## Response Format
 

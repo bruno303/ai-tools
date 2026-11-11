@@ -47,6 +47,7 @@ reasoning-effort fields in the corresponding files under `opencode/agents/`,
 - **`skills/db-change-checklist/SKILL.md`** - checklist for schema, query, migration, and rollout risk.
 - **`skills/observability-instrumentation-check/SKILL.md`** - ensure logs/metrics/traces/alerts are actionable and low-noise.
 - **`skills/project-coding-guidelines/SKILL.md`** - enforce repository-first architecture and placement conventions before implementation.
+- **`skills/software-design/SKILL.md`** - choose SOLID-informed patterns only when a concrete design force justifies them, with a catalog, selection guide, and review checklist.
 - **`skills/go-expert/SKILL.md`** - idiomatic, production-grade Go coding conventions.
 - **`skills/nextjs-coding/SKILL.md`** - Next.js frontend conventions for readability, maintainability, and correctness.
 - **`skills/simplify/SKILL.md`** - refine recently modified code for clarity and consistency without changing functionality.

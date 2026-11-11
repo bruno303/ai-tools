@@ -57,7 +57,8 @@ When implementing Go code, follow this sequence:
 ## Decision Guides
 
 These are the decisions that matter most in Go code. For each one, load the
-reference file when you need depth.
+reference file when you need depth. For language-neutral pattern selection, use
+the `software-design` skill; this file stays focused on Go idioms.
 
 ### Error Handling
 
