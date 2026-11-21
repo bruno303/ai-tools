@@ -8,6 +8,7 @@ Reusable agent and skill definitions for agentic software development workflows.
 - `archive/opencode/agents/` preserves the retired `architect`, `builder`, `reviewer`, and `spec-driver` definitions for reference; archived files are not installed.
 - `skills/` contains reusable skills shared across agents.
 - `benchmarks/` contains a harness-agnostic runner and repeatable scenarios for comparing models, skills, and workflows.
+- `sandbox/opencode/` contains a native Docker Sandboxes (schema v3) workload kit that runs OpenCode V2 on Ubuntu 24.04 for linux/amd64; see [`sandbox/opencode/README.md`](sandbox/opencode/README.md).
 
 ## Agents
 

@@ -1,0 +1,105 @@
+# syntax=docker/sandbox-kit:3
+#
+# Native OpenCode V2 workload kit for Docker Sandboxes (schema v3).
+#
+# This kit is independent of the built-in `opencode` workload, which ships
+# OpenCode V1. It installs OpenCode V2 from the official npm package and the
+# compiler/toolchain versions pinned below.
+
+schemaVersion: "3"
+kind: workload
+displayName: OpenCode V2
+description: >-
+  OpenCode V2 with Go 1.25 (via gvm), Node LTS, Python/uv and a build
+  toolchain. ChatGPT subscription OAuth and OpenCode Go are the only
+  providers wired; no model is forced.
+sourceUrl: https://opencode.ai/v2/docs
+
+args:
+  opencodeVersion:
+    default: "2.0.22"
+    pattern: '^[0-9]+\.[0-9]+\.[0-9]+$'
+    description: OpenCode V2 npm package version to install
+    buildArg: OPENCODE_VERSION
+  goVersion:
+    default: "1.25.14"
+    pattern: '^1\.25\.[0-9]+$'
+    description: Go 1.25.x patch installed through gvm
+    buildArg: GO_VERSION
+  gvmCommit:
+    default: "dd652539fa4b771840846f8319fad303c7d0a8d2"
+    pattern: '^[0-9a-f]{40}$'
+    description: Pinned moovweb/gvm commit
+    buildArg: GVM_COMMIT
+  nodeVersion:
+    default: "24.21.0"
+    pattern: '^24\.[0-9]+\.[0-9]+$'
+    description: Node.js LTS version
+    buildArg: NODE_VERSION
+  uvVersion:
+    default: "0.12.23"
+    pattern: '^[0-9]+\.[0-9]+\.[0-9]+$'
+    description: uv/uvx version
+    buildArg: UV_VERSION
+
+provides: ["opencode@${{ kit.args.opencodeVersion }}"]
+
+capabilities:
+  # sbx@1: the sandbox host owns the launch; the image declares agent (uid
+  # 1000) and the /bin/sh + /bin/bash launch contract.
+  - type: com.docker.sandbox/sbx@1
+
+  # Runtime egress only. Build/registry fetch traffic belongs to image
+  # creation, not the sandbox. opencode.ai covers OpenCode Go and the model
+  # catalog; models.dev serves the provider catalog; the OpenAI hosts serve
+  # the ChatGPT subscription OAuth flow and its backend API.
+  - type: com.docker.sandbox/network-policy@1
+    config:
+      runtime:
+        allow:
+          - opencode.ai
+          - models.dev
+          - auth.openai.com
+          - chatgpt.com
+          - api.openai.com
+          - registry.npmjs.org
+
+  # OpenCode Go API key. The real key stays on the host: the sandbox sees a
+  # sentinel in OPENCODE_API_KEY and the host proxy rewrites the Authorization
+  # header for requests to opencode.ai. models.dev, the catalog OpenCode uses,
+  # declares the opencode-go provider as OpenAI-compatible with env
+  # OPENCODE_API_KEY and base URL https://opencode.ai/zen/go/v1.
+  - type: com.docker.sandbox/credential@1
+    optional: true
+    description: OpenCode Go API access (host-injected)
+    config:
+      service: opencode-go
+      phase: runtime
+      apiKey:
+        name: OPENCODE_API_KEY
+        proxyManaged: true
+        inject:
+          - domain: opencode.ai
+            header: Authorization
+            format: "Bearer %s"
+
+  # Keep the pinned install from moving itself, using only verified V2 config
+  # fields (https://opencode.ai/v2/docs/config). No model is selected.
+  - type: com.docker.sandbox/lifecycle@1
+    config:
+      files:
+        - path: /home/agent/.config/opencode/opencode.json
+          content: |
+            {
+              "$schema": "https://opencode.ai/config.json",
+              "update": "disable"
+            }
+          mode: "0644"
+          description: OpenCode V2 global config (pinned updates, no model)
+
+  # Sandbox guidance, written beside the workspace. Project AGENTS.md keeps
+  # precedence.
+  - type: com.docker.sandbox/agent-context@1
+    config:
+      filename: AGENTS.md
+      contentFile: ./context.md

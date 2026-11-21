@@ -1,0 +1,9 @@
+# Keep the OpenCode V2 kit build context small.
+#
+# Do NOT exclude the kit inputs the frontend reads from this context:
+# opencode.yaml, opencode.dockerfile, context.md (agent-context contentFile)
+# and files/*.
+.dockerignore
+.git
+**/.git
+README.md

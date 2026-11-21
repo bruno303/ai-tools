@@ -1,0 +1,3 @@
+# OpenCode sandbox kit: force LF so the kit builds identically from a Windows
+# (native PowerShell) checkout. Scoped to the kit only.
+sandbox/opencode/** text eol=lf
