@@ -33,32 +33,48 @@ contains the implementer and reviewer prompt templates. If you loaded this skill
 from a file path, resolve paths relative to that directory. If unsure, search
 your filesystem for `implementer_prompt.md` — it lives next to this file.
 
-## Worker profile contract
+## Worker resolution
 
-The active `executor` and `reviewer` profiles are model-only definitions. They
-select the model and any harness-native reasoning settings; this skill owns the
-behavioral instructions, task contracts, review gates, and handback formats.
+Workers come in two kinds, each resolved independently: the **executor**
+(implementer, task fixer, final fixer) and the **reviewer** (task reviewer,
+final reviewer). This skill owns the behavioral instructions, task contracts,
+review gates, and handback formats; the resolved worker only supplies the model
+and reasoning settings.
 
-Before dispatching the first worker, confirm that the host runtime can resolve
-both profiles by name through its native agent/profile selector:
+Before dispatching the first worker, resolve each kind:
 
-| Workflow role | Profile |
+1. If `.agents/plans/workers.md` exists, reuse the settings recorded there.
+2. Otherwise, if the host runtime can resolve a profile named `executor` (or
+   `reviewer`) through its native agent/profile selector, use that profile. Its
+   model settings are the source of truth; do not override them and do not ask.
+3. Otherwise, use a general-purpose subagent for that kind and ask the user for
+   its model and effort (see below).
+
+Ask only for the kinds that did not resolve to a profile. Use a single
+question call covering all unresolved kinds. Discover model options through the
+runtime's model lookup (chat models, the orchestrator's own provider first);
+never guess model IDs. Offer "use the orchestrator's default" as an option. In
+OpenCode, effort is the model variant, passed as `provider/model#variant` in the
+dispatch `model` field.
+
+Record the resolved settings in `.agents/plans/workers.md` (one line per kind:
+profile name, or `general` plus model/variant) so a resumed run does not ask
+again.
+
+| Workflow role | Kind |
 |---|---|
-| Task implementer | `executor` |
-| Task-scoped fixer | `executor` |
-| Lightweight task reviewer | `reviewer` |
-| Final aggregate reviewer | `reviewer` |
-| Final consolidated fixer | `executor` |
+| Task implementer | executor |
+| Task-scoped fixer | executor |
+| Lightweight task reviewer | reviewer |
+| Final aggregate reviewer | reviewer |
+| Final consolidated fixer | executor |
 
-Use the selected profile name when dispatching each worker. If the host runtime
-exposes an `agent` or `agent_type` dispatch field, set that field to the
-selected profile name. Do not pass a concrete model ID or override the
-profile's model settings. The main agent remains the orchestrator and does not
-switch to either worker profile.
-
-If either profile cannot be resolved, stop before dispatching workers and report
-`MISSING_AGENT_PROFILE: <profile>` with the harness-specific setup required.
-Do not silently fall back to the orchestrator's default model.
+Use the same resolved settings for every dispatch of a kind; the final reviewer
+uses the same settings as the task reviewer. If the runtime exposes an `agent`
+or `agent_type` field, set it to the profile name or the general-purpose agent.
+If the runtime cannot set a model or effort on a dispatched worker, tell the
+user and continue on the runtime default only after they confirm. The main agent
+remains the orchestrator and does not switch to a worker profile.
 
 ## Step 0: Load and normalize the plan
 
@@ -210,7 +226,7 @@ repository gate. If the repository or plan establishes that a check is not
 applicable, pass that fact explicitly so the implementer records it rather than
 inventing a command.
 
-Dispatch a fresh subagent with the `executor` profile and the project root path
+Dispatch a fresh executor worker and the project root path
 so it can resolve `{brief_path}`. Do not paste the full plan or spec into the
 dispatch prompt — the brief file is the contract.
 
@@ -275,8 +291,8 @@ The scoped diff procedure must:
 
 The reviewer receives only the task brief, task report, and this scoped diff at
 first. Read `references/reviewer_prompt.md`, fill in `{brief_path}`,
-`{report_path}`, and `{diff_path}`, then dispatch one fresh worker with the
-`reviewer` profile. Do not do broad architectural or end-to-end review at this
+`{report_path}`, and `{diff_path}`, then dispatch one fresh reviewer
+worker. Do not do broad architectural or end-to-end review at this
 stage.
 
 #### Reviewer result handling
@@ -287,7 +303,7 @@ pass from an ambiguous verdict.
 | Response | Action |
 |---|---|
 | **`STATUS: PASSED`** | Proceed to the task handback gate. |
-| **`STATUS: CHANGES_REQUESTED`** | Dispatch one fresh `executor` fixer for a single consolidated fix pass containing the findings. It may modify only the declared expected outputs and its task report; it must not modify generated diff artifacts. The fixer must rerun the focused verification command and update the report. Regenerate the scoped diff if an updated artifact is needed. Do not re-review the task. |
+| **`STATUS: CHANGES_REQUESTED`** | Dispatch one fresh executor fixer for a single consolidated fix pass containing the findings. It may modify only the declared expected outputs and its task report; it must not modify generated diff artifacts. The fixer must rerun the focused verification command and update the report. Regenerate the scoped diff if an updated artifact is needed. Do not re-review the task. |
 | Ambiguous or missing status | Ask a fresh reviewer once for a clear verdict. If it remains unclear, stop and report the blocker. |
 
 If the reviewer flags something that is demonstrably correct (for example,
@@ -331,8 +347,8 @@ scopes, preserve new/deleted/renamed files, and do not use only the last task's
 diff. Generated plan, report, and review artifacts are inputs to the workflow,
 not implementation changes to review.
 
-Read `references/final_reviewer_prompt.md` and dispatch one fresh worker with
-the `reviewer` profile and:
+Read `references/final_reviewer_prompt.md` and dispatch one fresh reviewer
+worker with:
 
 - the complete plan;
 - all implementation reports;
@@ -347,7 +363,7 @@ aggregate review or infer a pass.
 
 If the final reviewer returns `STATUS: PASSED`, proceed to the final quality
 gate. If it returns `STATUS: CHANGES_REQUESTED`, dispatch one final
-consolidated fixer with the `executor` profile and all critical, high, and
+consolidated executor fixer with all critical, high, and
 medium findings plus practical low findings. The fixer may not edit generated
 diff artifacts. If the fixer returns `STATUS: OK`, regenerate the aggregate
 artifact if needed and run the final quality gate. If it returns
@@ -371,11 +387,8 @@ another automatic fix/review loop.
 
 ## Model and reasoning settings
 
-Do not select concrete model IDs or override model/reasoning settings in this
-workflow. The selected profile is the source of truth for those settings, which
-keeps the workflow portable across harnesses. If a runtime cannot resolve a
-named profile, apply the missing-profile rule above instead of using its normal
-default configuration.
+Never guess concrete model IDs. Use only a defined profile's settings or the
+model and effort the user chose during worker resolution.
 
 ## Context discipline
 
